@@ -41,8 +41,8 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
       setInputValue('');
     }
   };
-
-  const handleTagClick = (tag: string) => {
+  
+  const toggleTagSelection = (tag: string) => {
     if (selectedTags.includes(tag)) {
       onTagsChange(selectedTags.filter((t) => t !== tag));
     } else {
@@ -50,47 +50,47 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
     }
   };
 
-  const handleRemoveTag = (tagToRemove: string) => {
-    onTagsChange(selectedTags.filter((tag) => tag !== tagToRemove));
-  };
-
   const filteredAvailableTags = availableTags.filter(
-    (tag) => !selectedTags.includes(tag) && tag.toLowerCase().includes(inputValue.toLowerCase())
+    (tag) => tag.toLowerCase().includes(inputValue.toLowerCase())
   );
 
   return (
-    <div className="tag-input-container">
-      <div className="flex flex-wrap gap-2 mb-2">
-        {selectedTags.map((tag) => (
-          <span key={tag} className="tag-item">
-            {tag}
-            <button
-              type="button"
-              onClick={() => handleRemoveTag(tag)}
-              className="ml-2 hover:text-gray-200 focus:outline-none"
-            >
-              &times;
-            </button>
-          </span>
-        ))}
+    <div>
+      <div style={{ backgroundColor: '#333', borderRadius: '4px', padding: '5px', marginBottom: '10px' }}>
+        <input
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleInputKeyDown}
+            placeholder="Add new tags or filter existing..."
+            style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                outline: 'none',
+                width: '100%',
+                padding: '5px'
+            }}
+        />
       </div>
-      <input
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onKeyDown={handleInputKeyDown}
-        placeholder="Add new tags or select from below..."
-        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2"
-      />
-      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border p-2 rounded">
-        {filteredAvailableTags.map((tag) => (
-          <span
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '150px', overflowY: 'auto', padding: '10px', backgroundColor: '#2b2b2b', borderRadius: '4px' }}>
+        {filteredAvailableTags.map(tag => (
+          <button
             key={tag}
-            onClick={() => handleTagClick(tag)}
-            className="tag-item cursor-pointer"
+            onClick={() => toggleTagSelection(tag)}
+            className="tag-suggestion-item"
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #555',
+              borderRadius: '16px',
+              background: selectedTags.includes(tag) ? '#0078d4' : '#444',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
           >
             {tag}
-          </span>
+          </button>
         ))}
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import FullScreenTextEditor from '../components/FullScreenTextEditor';
-import TagInput from '../components/TagInput'; // Import the new TagInput component
+import TagInput from '../components/TagInput';
 
 interface Card {
   id: string;
@@ -12,9 +12,29 @@ interface Card {
   character?: string;
   scenario?: string;
   system?: string;
-  tags: string[]; // Add tags property
-  // Add other card properties as needed
+  tags: string[];
 }
+
+const TabButton: React.FC<{
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+}> = ({ label, isActive, onClick }) => (
+  <button
+    onClick={onClick}
+    style={{
+      padding: '10px 15px',
+      border: 'none',
+      borderBottom: isActive ? '2px solid #0078d4' : '2px solid transparent',
+      background: 'transparent',
+      color: 'white',
+      cursor: 'pointer',
+      fontSize: '1rem',
+    }}
+  >
+    {label}
+  </button>
+);
 
 const CardDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +44,7 @@ const CardDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editableCard, setEditableCard] = useState<Card | null>(null);
+  const [activeTab, setActiveTab] = useState('basic');
 
   useEffect(() => {
     const fetchCardDetails = async () => {
@@ -32,14 +53,12 @@ const CardDetails: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setCard(data);
-          setEditableCard(data); // Initialize editable card with fetched data
+          setEditableCard(data);
         } else {
           setError('Card not found.');
-          console.error('Failed to fetch card details:', response.statusText);
         }
       } catch (err) {
         setError('Error fetching card details.');
-        console.error('Error fetching card details:', err);
       } finally {
         setLoading(false);
       }
@@ -56,14 +75,12 @@ const CardDetails: React.FC = () => {
         });
         if (response.ok) {
           alert('Card deleted successfully!');
-          navigate('/'); // Redirect to gallery page
+          navigate('/');
         } else {
           alert('Failed to delete card.');
-          console.error('Failed to delete card:', response.statusText);
         }
       } catch (err) {
         alert('Error deleting card.');
-        console.error('Error deleting card:', err);
       }
     }
   };
@@ -81,16 +98,14 @@ const CardDetails: React.FC = () => {
       });
 
       if (response.ok) {
-        setCard(editableCard); // Update main card state
-        setIsEditing(false); // Exit edit mode
+        setCard(editableCard);
+        setIsEditing(false);
         alert('Card updated successfully!');
       } else {
         alert('Failed to update card.');
-        console.error('Failed to update card:', response.statusText);
       }
     } catch (err) {
       alert('Error updating card.');
-      console.error('Error updating card:', err);
     }
   };
 
@@ -103,141 +118,100 @@ const CardDetails: React.FC = () => {
     setEditableCard(prev => (prev ? { ...prev, tags: newTags } : null));
   };
 
-  if (loading) {
-    return <div className="text-center p-4">Loading card details...</div>;
-  }
+  if (loading) return <div style={{ padding: '2rem' }}>Loading...</div>;
+  if (error) return <div style={{ padding: '2rem', color: 'red' }}>{error}</div>;
+  if (!card) return <div style={{ padding: '2rem' }}>Card not found.</div>;
 
-  if (error) {
-    return <div className="text-center p-4 text-red-500">{error}</div>;
-  }
-
-  if (!card) {
-    return <div className="text-center p-4">No card data available.</div>;
-  }
+  const renderContent = () => {
+    if (!isEditing) {
+      return (
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{card.name}</h1>
+          <p><strong>Creator:</strong> {card.creator}</p>
+          <p><strong>Description:</strong> {card.description}</p>
+          <div style={{ marginTop: '1rem' }}>
+            {card.tags.map(tag => (
+              <span key={tag} style={{ backgroundColor: '#444', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', marginRight: '5px' }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    // Editing mode content based on tab
+    switch (activeTab) {
+      case 'basic':
+        return (
+          <div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label>Name:</label>
+              <input type="text" name="name" value={editableCard?.name || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label>Creator:</label>
+              <input type="text" name="creator" value={editableCard?.creator || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+                <label>Tags:</label>
+                <TagInput selectedTags={editableCard?.tags || []} onTagsChange={handleTagsChange} />
+            </div>
+          </div>
+        );
+      case 'details':
+        return (
+          <div>
+            <FullScreenTextEditor
+              label="Description"
+              value={editableCard?.description || ''}
+              onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            />
+            <FullScreenTextEditor
+              label="Character"
+              value={editableCard?.character || ''}
+              onChange={(value) => handleChange({ target: { name: 'character', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            />
+            <FullScreenTextEditor
+              label="Scenario"
+              value={editableCard?.scenario || ''}
+              onChange={(value) => handleChange({ target: { name: 'scenario', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-end mb-4">
-        {isEditing ? (
-          <>
-            <button
-              onClick={handleSave}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => setIsEditing(false)}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Delete
-            </button>
-          </>
-        )}
-      </div>
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="md:w-1/3">
-          <img src={`http://localhost:3001/api/images/${card.image}`} alt={card.name} className="w-full h-auto rounded shadow-lg" />
-        </div>
-        <div className="md:w-2/3">
-          {isEditing ? (
-            <form>
-              <div className="mb-4">
-                <label htmlFor="name" className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Name:</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={editableCard?.name || ''}
-                  onChange={handleChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div className="mb-4">
-                <FullScreenTextEditor
-                  label="Description"
-                  value={editableCard?.description || ''}
-                  onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-                  placeholder="Enter description..."
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="creator" className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Creator:</label>
-                <input
-                  type="text"
-                  id="creator"
-                  name="creator"
-                  value={editableCard?.creator || ''}
-                  onChange={handleChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div className="mb-4">
-                <FullScreenTextEditor
-                  label="Character"
-                  value={editableCard?.character || ''}
-                  onChange={(value) => handleChange({ target: { name: 'character', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-                  placeholder="Enter character details..."
-                />
-              </div>
-              <div className="mb-4">
-                <FullScreenTextEditor
-                  label="Scenario"
-                  value={editableCard?.scenario || ''}
-                  onChange={(value) => handleChange({ target: { name: 'scenario', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-                  placeholder="Enter scenario details..."
-                />
-              </div>
-              <div className="mb-4">
-                <FullScreenTextEditor
-                  label="System"
-                  value={editableCard?.system || ''}
-                  onChange={(value) => handleChange({ target: { name: 'system', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-                  placeholder="Enter system details..."
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Tags:</label>
-                <TagInput selectedTags={editableCard?.tags || []} onTagsChange={handleTagsChange} />
-              </div>
-            </form>
+    <div style={{ display: 'flex', height: 'calc(100vh - 48px)', padding: '1rem' }}>
+      {/* Left Panel: Avatar */}
+      <div style={{ flex: '0 0 300px', paddingRight: '1rem' }}>
+        <img src={`http://localhost:3001/api/images/${card.image}`} alt={card.name} style={{ width: '100%', borderRadius: '8px' }} />
+        <div style={{ marginTop: '1rem' }}>
+          {!isEditing ? (
+            <button onClick={() => setIsEditing(true)} style={{ width: '100%', padding: '10px', background: '#0078d4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
           ) : (
             <>
-              <h1 className="text-3xl font-bold mb-4">{card.name}</h1>
-              <p className="text-gray-700 dark:text-gray-300 mb-2"><strong>Creator:</strong> {card.creator}</p>
-              <p className="text-gray-700 dark:text-gray-300 mb-2"><strong>Description:</strong> {card.description}</p>
-              <p className="text-gray-700 dark:text-gray-300 mb-2"><strong>Character:</strong> {card.character}</p>
-              <p className="text-gray-700 dark:text-gray-300 mb-2"><strong>Scenario:</strong> {card.scenario}</p>
-              <p className="text-gray-700 dark:text-gray-300 mb-2"><strong>System:</strong> {card.system}</p>
-              {card.tags && card.tags.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold mb-2">Tags:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {card.tags.map((tag) => (
-                      <span key={tag} className="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-sm font-medium dark:bg-blue-900 dark:text-blue-100">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <button onClick={handleSave} style={{ width: '100%', padding: '10px', background: 'green', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginBottom: '0.5rem' }}>Save</button>
+              <button onClick={() => setIsEditing(false)} style={{ width: '100%', padding: '10px', background: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
             </>
           )}
+          <button onClick={handleDelete} style={{ width: '100%', padding: '10px', background: 'darkred', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '0.5rem' }}>Delete</button>
+        </div>
+      </div>
+
+      {/* Right Panel: Tabs and Content */}
+      <div style={{ flex: 1, background: '#2b2b2b', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+        {isEditing && (
+          <div style={{ borderBottom: '1px solid #444', marginBottom: '1rem' }}>
+            <TabButton label="Basic Info" isActive={activeTab === 'basic'} onClick={() => setActiveTab('basic')} />
+            <TabButton label="Details" isActive={activeTab === 'details'} onClick={() => setActiveTab('details')} />
+          </div>
+        )}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+            {renderContent()}
         </div>
       </div>
     </div>

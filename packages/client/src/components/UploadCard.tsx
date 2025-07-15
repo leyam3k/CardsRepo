@@ -39,18 +39,15 @@ const UploadCard: React.FC = () => {
   }, [addCard]);
 
   return (
-    <div className="upload-card-container">
-      <h2 className="text-xl font-bold mb-4">Upload Character Card (PNG)</h2>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '1rem', border: '1px solid #333', borderRadius: '8px' }}>
+      <h2 style={{ fontSize: '1.2rem', fontWeight: '600', margin: 0 }}>Upload Character Card (PNG)</h2>
       <input
         type="file"
         accept="image/png"
         onChange={handleFileUpload}
-        className="block w-full text-sm text-gray-500
-          file:mr-4 file:py-2 file:px-4
-          file:rounded-full file:border-0
-          file:text-sm file:font-semibold
-          file:bg-blue-50 file:text-blue-700
-          hover:file:bg-blue-100"
+        style={{
+          color: '#ccc',
+        }}
       />
     </div>
   );
