@@ -4,7 +4,12 @@ interface Card {
   id: string;
   image: string;
   name: string;
-  // Add other card properties as needed
+  description: string;
+  creator?: string;
+  character?: string;
+  scenario?: string;
+  system?: string;
+  tags: string[];
 }
 
 interface CardStore {
