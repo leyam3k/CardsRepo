@@ -39,7 +39,7 @@ const UploadCard: React.FC = () => {
   }, [addCard]);
 
   return (
-    <div className="p-4 border rounded shadow-md">
+    <div className="upload-card-container">
       <h2 className="text-xl font-bold mb-4">Upload Character Card (PNG)</h2>
       <input
         type="file"

@@ -41,7 +41,7 @@ const CardGallery: React.FC = () => {
   }, [setCards, searchTerm, selectedTags]);
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="card-gallery-container">
       <h1 className="text-2xl font-bold mb-4">Card Gallery</h1>
 
       {/* Search and Filter Section */}
@@ -59,21 +59,23 @@ const CardGallery: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="card-gallery-grid">
         {cards.map((card) => (
-          <Link to={`/card/${card.id}`} key={card.id} className="block border rounded shadow-md p-4 hover:shadow-lg transition-shadow bg-white dark:bg-gray-700">
-            <img src={`http://localhost:3001/api/images/${card.image}`} alt={card.name} className="w-full h-48 object-cover mb-2 rounded" />
-            <h2 className="text-lg font-semibold truncate text-gray-900 dark:text-gray-100">{card.name}</h2>
-            {card.description && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-2">{card.description}</p>}
-            {card.tags && card.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {card.tags.map((tag) => (
-                  <span key={tag} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium dark:bg-blue-900 dark:text-blue-100">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
+          <Link to={`/card/${card.id}`} key={card.id} className="card-item">
+            <img src={`http://localhost:3001/api/images/${card.image}`} alt={card.name} className="w-full h-48 object-cover" />
+            <div className="p-4">
+              <h2 className="text-lg font-semibold truncate text-gray-900 dark:text-gray-100">{card.name}</h2>
+              {card.description && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-2">{card.description}</p>}
+              {card.tags && card.tags.length > 0 && (
+                <div className="tag-container">
+                  {card.tags.map((tag) => (
+                    <span key={tag} className="tag-item">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </Link>
         ))}
       </div>

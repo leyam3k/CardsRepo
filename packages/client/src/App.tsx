@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import CardGallery from './pages/CardGallery';
 import CardDetails from './pages/CardDetails';
 import UploadCard from './components/UploadCard';
+import './App.css';
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -26,17 +27,14 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Cards Repo</h1>
-          <button
-            onClick={toggleDarkMode}
-            className="px-4 py-2 rounded-full bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-          >
+      <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
+        <header className="app-header">
+          <h1 className="header-title">Cards Repo</h1>
+          <button onClick={toggleDarkMode} className="theme-toggle-button">
             {isDarkMode ? 'Light Mode' : 'Dark Mode'}
           </button>
         </header>
-        <main className="p-4">
+        <main className="app-main">
           <UploadCard />
           <Routes>
             <Route path="/" element={<CardGallery />} />

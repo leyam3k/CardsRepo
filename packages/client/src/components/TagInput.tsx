@@ -62,15 +62,12 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
     <div className="tag-input-container">
       <div className="flex flex-wrap gap-2 mb-2">
         {selectedTags.map((tag) => (
-          <span
-            key={tag}
-            className="bg-blue-500 text-white px-3 py-1 rounded-full flex items-center text-sm"
-          >
+          <span key={tag} className="tag-item">
             {tag}
             <button
               type="button"
               onClick={() => handleRemoveTag(tag)}
-              className="ml-2 text-white hover:text-gray-200 focus:outline-none"
+              className="ml-2 hover:text-gray-200 focus:outline-none"
             >
               &times;
             </button>
@@ -90,7 +87,7 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
           <span
             key={tag}
             onClick={() => handleTagClick(tag)}
-            className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full cursor-pointer hover:bg-gray-300 text-sm"
+            className="tag-item cursor-pointer"
           >
             {tag}
           </span>
