@@ -33,9 +33,10 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
       e.preventDefault();
-      const newTag = inputValue.trim();
-      if (!selectedTags.includes(newTag)) {
-        onTagsChange([...selectedTags, newTag]);
+      const newTags = inputValue.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+      const uniqueNewTags = newTags.filter(tag => !selectedTags.includes(tag));
+      if (uniqueNewTags.length > 0) {
+        onTagsChange([...selectedTags, ...uniqueNewTags]);
       }
       setInputValue('');
     }

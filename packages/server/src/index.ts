@@ -40,7 +40,18 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
     const cardFilePath = path.join(cardsDir, `${cardId}.json`);
     // Parse characterData, add id, image, and an empty tags array by default
     const parsedCharacterData = JSON.parse(characterData);
-    const cardToSave = { id: cardId, image: imageFilename, tags: [], ...parsedCharacterData };
+
+    // Extract creator from nested 'data' if present, otherwise use top-level or default to empty string
+    const finalCreator = parsedCharacterData.data?.creator || parsedCharacterData.creator || '';
+
+    const cardToSave = {
+        id: cardId,
+        image: imageFilename,
+        tags: [],
+        ...parsedCharacterData, // Spread the original data first
+        creator: finalCreator // Then explicitly set the creator, overwriting the original if it exists
+    };
+
     await fs.writeFile(cardFilePath, JSON.stringify(cardToSave, null, 2));
 
     // Save the image

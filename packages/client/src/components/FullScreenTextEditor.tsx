@@ -25,9 +25,6 @@ const FullScreenTextEditor: React.FC<FullScreenTextEditorProps> = ({
     setIsOpen(true);
   };
 
-  const handleClose = () => {
-    setIsOpen(false);
-  };
 
   const handleSave = () => {
     onChange(editorValue);
@@ -51,7 +48,7 @@ const FullScreenTextEditor: React.FC<FullScreenTextEditorProps> = ({
         </div>
         <button
           onClick={handleOpen}
-          className="absolute top-1 right-1 bg-blue-500 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-in-out"
+          className="absolute top-1 right-1 bg-blue-500 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded transition-opacity duration-150 ease-in-out"
         >
           Edit
         </button>

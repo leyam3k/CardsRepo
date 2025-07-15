@@ -1,18 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useCardStore } from '../store/cardStore';
+import { useCardStore, type Card } from '../store/cardStore';
 import { Link } from 'react-router-dom';
 import TagInput from '../components/TagInput'; // Import TagInput for filtering
 
-interface Card {
-  id: string;
-  image: string;
-  name: string;
-  description: string;
-  tags: string[];
-}
-
 const CardGallery: React.FC = () => {
-  const cards = useCardStore((state) => state.cards);
+  const cards: Card[] = useCardStore((state) => state.cards);
   const setCards = useCardStore((state) => state.setCards);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
