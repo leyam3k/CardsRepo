@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import CardGallery from './pages/CardGallery';
 import CardDetails from './pages/CardDetails';
-import UploadCard from './components/UploadCard';
 import './App.css';
 
 function App() {

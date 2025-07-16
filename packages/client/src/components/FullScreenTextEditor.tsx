@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Editor from '@monaco-editor/react';
 
 interface FullScreenTextEditorProps {
   value: string;
@@ -15,16 +16,17 @@ const FullScreenTextEditor: React.FC<FullScreenTextEditorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editorValue, setEditorValue] = useState(value);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  console.log('FullScreenTextEditor component rendered. Label:', label);
 
   useEffect(() => {
     setEditorValue(value);
   }, [value]);
 
   const handleOpen = () => {
+    console.log('handleOpen called, setting isOpen to true');
     setIsOpen(true);
   };
-
 
   const handleSave = () => {
     onChange(editorValue);
@@ -35,58 +37,99 @@ const FullScreenTextEditor: React.FC<FullScreenTextEditorProps> = ({
     setEditorValue(value); // Revert to original value
     setIsOpen(false);
   };
+  
+  const handleEditorChange = (newValue: string | undefined) => {
+    setEditorValue(newValue || '');
+  };
 
   return (
-    <div>
-      {label && <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">{label}:</label>}
-      <div
-        className="border rounded p-2 min-h-[100px] cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 overflow-hidden relative"
-        onClick={handleOpen}
-      >
-        <div className="whitespace-pre-wrap text-sm">
-          {value || <span className="text-gray-400">{placeholder || 'Click to edit...'}</span>}
-        </div>
+    <div className="mb-4">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        {label && <label className="block text-sm font-bold">{label}:</label>}
         <button
           onClick={handleOpen}
-          className="absolute top-1 right-1 bg-blue-500 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded transition-opacity duration-150 ease-in-out"
+          aria-label="Open full-screen editor"
+          className="opacity-50 hover:opacity-100 transition-opacity"
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: 'white',
+            cursor: 'pointer',
+            padding: '0.1rem',
+          }}
         >
-          Edit
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/>
+          </svg>
         </button>
       </div>
+      <textarea
+        className="border rounded p-2 bg-[#2b2b2b] text-gray-200 w-full whitespace-pre-wrap text-sm"
+        style={{
+          minHeight: '120px',
+          maxHeight: '150px',
+          overflowY: 'auto',
+          resize: 'none',
+        }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder || 'Click the icon to edit...'}
+      />
 
       {isOpen && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-3xl h-3/4 flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{label || 'Edit Text'}</h2>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: '2rem',
+          }}
+        >
+          <div className="bg-[#1e1e1e] rounded-lg shadow-xl w-full h-full flex flex-col" style={{ maxWidth: '90vw', maxHeight: '90vh' }}>
+            <div className="p-4 border-b border-gray-700 flex justify-between items-center" style={{ flexShrink: 0 }}>
+              <h2 className="text-xl font-bold text-gray-100">{label || 'Edit Text'}</h2>
               <button
                 onClick={handleCancel}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-gray-400 hover:text-gray-200 text-3xl"
               >
                 &times;
               </button>
             </div>
-            <div className="flex-grow p-4">
-              <textarea
-                ref={textareaRef}
-                className="w-full h-full p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+            <div className="flex-grow p-4" style={{ overflow: 'hidden' }}>
+              <Editor
+                height="100%"
+                width="100%"
+                language="markdown"
+                theme="vs-dark"
                 value={editorValue}
-                onChange={(e) => setEditorValue(e.target.value)}
-                placeholder={placeholder}
-              ></textarea>
+                onChange={handleEditorChange}
+                loading="Loading Editor..."
+                options={{
+                  wordWrap: 'on',
+                  minimap: { enabled: true },
+                  fontSize: 14,
+                }}
+              />
             </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <div className="p-4 border-t border-gray-700 flex justify-end space-x-4" style={{ flexShrink: 0 }}>
               <button
                 onClick={handleCancel}
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
+                className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded"
               >
-                Save
+                Apply
               </button>
             </div>
           </div>

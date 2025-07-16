@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useCardStore, type Card } from '../store/cardStore';
+import { useCardStore } from '../store/cardStore';
 import { Card as CardComponent } from '../components/Card';
 import styles from './CardGallery.module.css';
 

@@ -12,6 +12,8 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
 
     /* Linting */
     "strict": true,
@@ -21,5 +23,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.cjs", "postcss.config.cjs", "tailwind.config.js"]
 }

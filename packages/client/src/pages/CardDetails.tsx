@@ -161,7 +161,7 @@ const CardDetails: React.FC = () => {
         );
       case 'details':
         return (
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <FullScreenTextEditor
               label="Description"
               value={editableCard?.description || ''}
@@ -203,14 +203,14 @@ const CardDetails: React.FC = () => {
       </div>
 
       {/* Right Panel: Tabs and Content */}
-      <div style={{ flex: 1, background: '#2b2b2b', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, background: '#2b2b2b', padding: '1.5rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {isEditing && (
-          <div style={{ borderBottom: '1px solid #444', marginBottom: '1rem' }}>
+          <div style={{ borderBottom: '1px solid #444', paddingBottom: '0.5rem' }}>
             <TabButton label="Basic Info" isActive={activeTab === 'basic'} onClick={() => setActiveTab('basic')} />
             <TabButton label="Details" isActive={activeTab === 'details'} onClick={() => setActiveTab('details')} />
           </div>
         )}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
             {renderContent()}
         </div>
       </div>
