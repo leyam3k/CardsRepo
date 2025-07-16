@@ -13,7 +13,8 @@ const UploadCard: React.FC = () => {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const characterData = Png.Parse(arrayBuffer);
+      const characterData = Png.Parse(arrayBuffer); // This is a string
+      const parsedCharacterData = JSON.parse(characterData); // Parse it once here, accessible in scope
 
       const formData = new FormData();
       formData.append('card', file);
@@ -25,8 +26,15 @@ const UploadCard: React.FC = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Upload successful:', result);
-        addCard({ id: result.cardId, image: `${result.cardId}.png`, ...JSON.parse(characterData) });
+        // Backend only returns cardId, so we use parsedCharacterData for other fields
+        const cardToAdd = {
+          id: result.cardId,
+          image: `${result.cardId}.png`,
+          ...parsedCharacterData, // Spread the parsed data from PNG
+          creator: parsedCharacterData.data?.creator || parsedCharacterData.creator || '', // Explicitly set creator
+          tags: parsedCharacterData.tags || [], // Ensure tags is an array
+        };
+        addCard(cardToAdd);
       } else {
         const errorData = await response.json();
         console.error('Upload failed:', errorData.error || response.statusText);
