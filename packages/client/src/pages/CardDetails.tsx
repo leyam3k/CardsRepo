@@ -168,7 +168,7 @@ const CardDetails: React.FC = () => {
               onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
             />
             <FullScreenTextEditor
-              label="Character/Personality"
+              label="Personality"
               value={editableCard?.character || ''}
               onChange={(value) => handleChange({ target: { name: 'character', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
             />

@@ -22,7 +22,7 @@ export const Card: React.FC<CardProps> = ({ card }) => {
             <h3 className={styles.cardName}>{card.name}</h3>
             <p className={styles.cardDescription}>{card.description}</p>
             <div className={styles.cardTags}>
-              {card.tags?.slice(0, 3).map(tag => (
+              {card.tags?.map(tag => (
                 <span key={tag} className={styles.tag}>{tag}</span>
               ))}
             </div>

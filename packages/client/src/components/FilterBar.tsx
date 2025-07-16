@@ -7,6 +7,7 @@ export const FilterBar: React.FC = () => {
   const cardCount = useCardStore((state) => state.cards.length);
   const selectedTags = useCardStore((state) => state.selectedTags);
   const toggleTag = useCardStore((state) => state.toggleTag);
+  const [tagSearch, setTagSearch] = useState('');
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -32,15 +33,37 @@ export const FilterBar: React.FC = () => {
         <button className={styles.tab}>Favorites</button>
       </div>
       <div className={styles.tags}>
-        {availableTags.map(tag => (
-          <button 
-            key={tag} 
-            className={`${styles.tagButton} ${selectedTags.includes(tag) ? styles.activeTag : ''}`}
-            onClick={() => toggleTag(tag)}
-          >
-            {tag}
-          </button>
-        ))}
+        <div className={styles.tagSearchContainer}>
+            <input
+                type="text"
+                placeholder="Search tags..."
+                className={styles.tagSearchInput}
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+            />
+        </div>
+        <div className={styles.tagList}>
+            {selectedTags.map(tag => (
+                <button
+                    key={tag}
+                    className={`${styles.tagButton} ${styles.activeTag}`}
+                    onClick={() => toggleTag(tag)}
+                >
+                    {tag}
+                </button>
+            ))}
+            {availableTags
+                .filter(tag => !selectedTags.includes(tag) && tag.toLowerCase().includes(tagSearch.toLowerCase()))
+                .map(tag => (
+                    <button
+                        key={tag}
+                        className={styles.tagButton}
+                        onClick={() => toggleTag(tag)}
+                    >
+                        {tag}
+                    </button>
+            ))}
+        </div>
       </div>
       <div className={styles.controls}>
         <span className={styles.characterCount}>{cardCount} characters</span>

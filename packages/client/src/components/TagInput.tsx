@@ -33,7 +33,7 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
       e.preventDefault();
-      const newTags = inputValue.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+      const newTags = inputValue.split(',').map(tag => tag.trim().replace(/^"|"$/g, '').trim()).filter(tag => tag !== '');
       const uniqueNewTags = newTags.filter(tag => !selectedTags.includes(tag));
       if (uniqueNewTags.length > 0) {
         onTagsChange([...selectedTags, ...uniqueNewTags]);
@@ -50,7 +50,9 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
     }
   };
 
-  const filteredAvailableTags = availableTags.filter(
+  const allTagsToShow = [...new Set([...selectedTags, ...availableTags])];
+
+  const filteredAvailableTags = allTagsToShow.filter(
     (tag) => tag.toLowerCase().includes(inputValue.toLowerCase())
   );
 
