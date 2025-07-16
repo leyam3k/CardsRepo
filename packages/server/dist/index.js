@@ -163,22 +163,30 @@ app.delete('/api/cards/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const cardFilePath = path_1.default.join(cardsDir, `${id}.json`);
-        const imageFilePath = path_1.default.join(imagesDir, `${id}.png`); // Assuming image filename matches card ID
-        // Check if card and image exist before attempting to delete
-        await fs_1.promises.access(cardFilePath);
-        try {
-            await fs_1.promises.access(imageFilePath);
-        }
-        catch (imageError) {
-            console.warn(`Image file for card ${id} not found, skipping deletion:`, imageError);
-        }
-        await fs_1.promises.unlink(cardFilePath); // Delete card JSON
-        if (await fs_1.promises.access(imageFilePath).then(() => true).catch(() => false)) { // Check again in case of race condition
-            await fs_1.promises.unlink(imageFilePath); // Delete associated image
+        // Read the card data to get the image filename. This also validates that the card exists.
+        const cardContent = await fs_1.promises.readFile(cardFilePath, 'utf-8');
+        const cardData = JSON.parse(cardContent);
+        const imageFilename = cardData.image;
+        // Delete the card JSON file first.
+        await fs_1.promises.unlink(cardFilePath);
+        // Then, attempt to delete the associated image file.
+        if (imageFilename) {
+            const imageFilePath = path_1.default.join(imagesDir, imageFilename);
+            try {
+                await fs_1.promises.unlink(imageFilePath);
+            }
+            catch (imageError) {
+                // If the file doesn't exist, we can ignore the error.
+                // Otherwise, log the error but don't fail the request.
+                if (imageError.code !== 'ENOENT') {
+                    console.warn(`Could not delete image file ${imageFilePath}:`, imageError);
+                }
+            }
         }
         res.json({ message: 'Card deleted successfully', cardId: id });
     }
     catch (error) {
+        // If the initial readFile fails, the card was not found.
         if (error.code === 'ENOENT') {
             return res.status(404).send('Card not found.');
         }
@@ -186,10 +194,17 @@ app.delete('/api/cards/:id', async (req, res) => {
         res.status(500).send('Internal server error.');
     }
 });
-app.get('/api/images/:imageFilename', (req, res) => {
+app.get('/api/images/:imageFilename', async (req, res) => {
     const { imageFilename } = req.params;
     const imagePath = path_1.default.join(imagesDir, imageFilename);
-    res.sendFile(imagePath);
+    try {
+        await fs_1.promises.access(imagePath); // Check if the file exists
+        res.sendFile(imagePath);
+    }
+    catch (error) {
+        // If fs.access throws, the file doesn't exist.
+        res.status(404).send('Image not found');
+    }
 });
 app.get('/', (req, res) => {
     res.send('Cards Repo Server is running!');
