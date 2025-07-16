@@ -1,9 +1,21 @@
+/* Janitor AI Inspired Theme */
+:root {
+  --background-primary: #1a1625;
+  --background-secondary: #25213a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a09fa6;
+  --accent-primary: #9333ea; /* purple-600 */
+  --accent-secondary: #7e22ce; /* purple-700 */
+  --border-primary: #3a3350;
+}
+
 body {
   margin: 0;
-  font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
-  background-color: #242424;
-  color: rgba(255, 255, 255, 0.87);
+  font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -12,27 +24,65 @@ body {
   min-height: 100vh;
 }
 
-/* Simple scrollbar styling for dark mode */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #2b2b2b;
-  /* Dark track */
+  background: var(--background-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
-  /* Darker thumb */
+  background: var(--border-primary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: var(--accent-secondary);
 }
 
-.tag-suggestion-item:hover {
-  background-color: #555;
+/* General component styles */
+button,
+input[type="button"],
+input[type="submit"] {
+  background-color: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  background-color: var(--accent-secondary);
+}
+
+input[type="text"],
+textarea {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  padding: 10px;
+  border-radius: 6px;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
+
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }

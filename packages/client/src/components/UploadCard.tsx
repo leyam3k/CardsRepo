@@ -1,9 +1,11 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useCardStore } from '../store/cardStore';
 import { Png } from '../lib/card-parser';
+import styles from './UploadCard.module.css';
 
 const UploadCard: React.FC = () => {
   const addCard = useCardStore((state) => state.addCard);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -24,9 +26,7 @@ const UploadCard: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         console.log('Upload successful:', result);
-        // Optionally, fetch all cards again to update the store, or add the new card directly
-        // For now, let's assume the backend returns the full card data
-        addCard({ id: result.cardId, image: `${result.cardId}.png`, ...JSON.parse(characterData) }); // Placeholder for actual card data
+        addCard({ id: result.cardId, image: `${result.cardId}.png`, ...JSON.parse(characterData) });
       } else {
         const errorData = await response.json();
         console.error('Upload failed:', errorData.error || response.statusText);
@@ -38,18 +38,23 @@ const UploadCard: React.FC = () => {
     }
   }, [addCard]);
 
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '1rem', border: '1px solid #333', borderRadius: '8px' }}>
-      <h2 style={{ fontSize: '1.2rem', fontWeight: '600', margin: 0 }}>Upload Character Card (PNG)</h2>
+    <>
       <input
         type="file"
         accept="image/png"
         onChange={handleFileUpload}
-        style={{
-          color: '#ccc',
-        }}
+        ref={fileInputRef}
+        style={{ display: 'none' }}
       />
-    </div>
+      <button onClick={handleClick} className={styles.uploadButton}>
+        Upload Card
+      </button>
+    </>
   );
 };
 

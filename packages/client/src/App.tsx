@@ -9,11 +9,13 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Routes with the main Janitor AI Layout */}
         <Route path="/" element={<Layout />}>
           <Route index element={<CardGallery />} />
-          <Route path="card/:id" element={<CardDetails />} />
-          {/* The UploadCard might be moved to a specific page or layout later */}
         </Route>
+        
+        {/* Standalone route for CardDetails without the main layout */}
+        <Route path="card/:id" element={<CardDetails />} />
       </Routes>
     </Router>
   );
