@@ -25,6 +25,19 @@ const imagesDir = path.join(__dirname, '../data/images');
 fs.mkdir(cardsDir, { recursive: true }).catch(console.error);
 fs.mkdir(imagesDir, { recursive: true }).catch(console.error);
 
+// Helper function to ensure data consistency for the client
+const transformCardData = (cardData: any) => {
+    // If 'personality' exists and 'character' does not, map it
+    if (cardData && cardData.personality && !cardData.character) {
+        cardData.character = cardData.personality;
+    }
+    // Ensure tags is always an array
+    if (!cardData.tags) {
+        cardData.tags = [];
+    }
+    return cardData;
+};
+
 app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded.');
@@ -77,11 +90,7 @@ app.get('/api/cards', async (req, res) => {
         .map(async file => {
           const filePath = path.join(cardsDir, file);
           const content = await fs.readFile(filePath, 'utf-8');
-          const cardData = JSON.parse(content);
-          if (!cardData.tags) {
-            cardData.tags = [];
-          }
-          return cardData;
+          return transformCardData(JSON.parse(content));
         })
     );
 
@@ -139,7 +148,7 @@ app.get('/api/cards/:id', async (req, res) => {
     const { id } = req.params;
     const cardFilePath = path.join(cardsDir, `${id}.json`);
     const content = await fs.readFile(cardFilePath, 'utf-8');
-    res.json(JSON.parse(content));
+    res.json(transformCardData(JSON.parse(content)));
   } catch (error) {
     console.error(`Error fetching card ${req.params.id}:`, error);
     res.status(404).send('Card not found.');
