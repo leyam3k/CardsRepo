@@ -2,18 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import FullScreenTextEditor from '../components/FullScreenTextEditor';
 import TagInput from '../components/TagInput';
-
-interface Card {
-  id: string;
-  image: string;
-  name: string;
-  description: string;
-  creator?: string;
-  character?: string;
-  scenario?: string;
-  system?: string;
-  tags: string[];
-}
+import { type Card } from '../store/cardStore';
 
 const TabButton: React.FC<{
   label: string;
@@ -68,7 +57,7 @@ const CardDetails: React.FC = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this card?')) {
+    if (window.confirm('Are you sure you want to delete this card permanently?')) {
       try {
         const response = await fetch(`http://localhost:3001/api/cards/${id}`, {
           method: 'DELETE',
@@ -85,6 +74,52 @@ const CardDetails: React.FC = () => {
     }
   };
 
+  const handleDuplicate = async () => {
+    if (!id) return;
+    if (window.confirm('Are you sure you want to duplicate this card?')) {
+      try {
+        const response = await fetch(`http://localhost:3001/api/cards/${id}/duplicate`, {
+          method: 'POST',
+        });
+        if (response.ok) {
+          const { card: newCard } = await response.json();
+          alert('Card duplicated successfully!');
+          navigate(`/card/${newCard.id}`);
+        } else {
+          alert('Failed to duplicate card.');
+        }
+      } catch (err) {
+        alert('Error duplicating card.');
+      }
+    }
+  };
+
+  const handleDownloadJson = () => {
+    if (!card) return;
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(card, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = `${card.name || 'character'}.json`;
+    link.click();
+  };
+
+  const handleDownloadPng = async () => {
+      // For now, we just download the existing avatar.
+      // In a future phase, we would embed the JSON data into the PNG before downloading.
+      if (!card?.imageUrl) return;
+      const response = await fetch(`http://localhost:3001${card.imageUrl}`);
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${card.name || 'character'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+
   const handleSave = async () => {
     if (!editableCard) return;
 
@@ -98,7 +133,9 @@ const CardDetails: React.FC = () => {
       });
 
       if (response.ok) {
-        setCard(editableCard);
+        const updatedCard = await response.json();
+        setCard(updatedCard.card);
+        setEditableCard(updatedCard.card);
         setIsEditing(false);
         alert('Card updated successfully!');
       } else {
@@ -120,22 +157,28 @@ const CardDetails: React.FC = () => {
 
   if (loading) return <div style={{ padding: '2rem' }}>Loading...</div>;
   if (error) return <div style={{ padding: '2rem', color: 'red' }}>{error}</div>;
-  if (!card) return <div style={{ padding: '2rem' }}>Card not found.</div>;
+  if (!card || !editableCard) return <div style={{ padding: '2rem' }}>Card not found.</div>;
 
   const renderContent = () => {
+    const displayCard = isEditing ? editableCard : card;
+    if (!displayCard) return null;
+
     if (!isEditing) {
       return (
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{card.name}</h1>
-          <p><strong>Creator:</strong> {card.creator}</p>
-          <p><strong>Description:</strong> {card.description}</p>
-          <div style={{ marginTop: '1rem' }}>
-            {card.tags.map(tag => (
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{displayCard.name}</h1>
+          <p><strong>Creator:</strong> {displayCard.creator}</p>
+          <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            {displayCard.tags.map(tag => (
               <span key={tag} style={{ backgroundColor: '#444', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', marginRight: '5px' }}>
                 {tag}
               </span>
             ))}
           </div>
+          <p><strong>Description:</strong> {displayCard.description}</p>
+          <p><strong>Personality:</strong> {displayCard.character}</p>
+          <p><strong>Scenario:</strong> {displayCard.scenario}</p>
+          {/* Add other read-only fields here */}
         </div>
       );
     }
@@ -144,39 +187,40 @@ const CardDetails: React.FC = () => {
     switch (activeTab) {
       case 'basic':
         return (
-          <div>
-            <div style={{ marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
               <label>Name:</label>
-              <input type="text" name="name" value={editableCard?.name || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+              <input type="text" name="name" value={editableCard.name || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-            <div style={{ marginBottom: '1rem' }}>
+            <div>
               <label>Creator:</label>
-              <input type="text" name="creator" value={editableCard?.creator || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+              <input type="text" name="creator" value={editableCard.creator || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-            <div style={{ marginBottom: '1rem' }}>
+             <div>
                 <label>Tags:</label>
-                <TagInput selectedTags={editableCard?.tags || []} onTagsChange={handleTagsChange} />
+                <TagInput selectedTags={editableCard.tags || []} onTagsChange={handleTagsChange} />
+            </div>
+            <div>
+              <label>Language:</label>
+              <input type="text" name="language" value={editableCard.language || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            </div>
+            <div>
+              <label>URL/Link:</label>
+              <input type="text" name="url" value={editableCard.url || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
           </div>
         );
       case 'details':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <FullScreenTextEditor
-              label="Description"
-              value={editableCard?.description || ''}
-              onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            />
-            <FullScreenTextEditor
-              label="Personality"
-              value={editableCard?.character || ''}
-              onChange={(value) => handleChange({ target: { name: 'character', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            />
-            <FullScreenTextEditor
-              label="Scenario"
-              value={editableCard?.scenario || ''}
-              onChange={(value) => handleChange({ target: { name: 'scenario', value } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            />
+            <FullScreenTextEditor label="Description" value={editableCard.description || ''} onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="Personality" value={editableCard.character || ''} onChange={(value) => handleChange({ target: { name: 'character', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="Scenario" value={editableCard.scenario || ''} onChange={(value) => handleChange({ target: { name: 'scenario', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="First Message" value={editableCard.first_mes || ''} onChange={(value) => handleChange({ target: { name: 'first_mes', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="Message Example" value={editableCard.mes_example || ''} onChange={(value) => handleChange({ target: { name: 'mes_example', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="System Prompt" value={editableCard.system_prompt || ''} onChange={(value) => handleChange({ target: { name: 'system_prompt', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="Post History Instructions" value={editableCard.post_history_instructions || ''} onChange={(value) => handleChange({ target: { name: 'post_history_instructions', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <FullScreenTextEditor label="Creator Notes" value={editableCard.creator_notes || ''} onChange={(value) => handleChange({ target: { name: 'creator_notes', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
           </div>
         );
       default:
@@ -185,20 +229,33 @@ const CardDetails: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 48px)', padding: '1rem' }}>
-      {/* Left Panel: Avatar */}
-      <div style={{ flex: '0 0 300px', paddingRight: '1rem' }}>
-        <img src={`http://localhost:3001/api/images/${card.image}`} alt={card.name} style={{ width: '100%', borderRadius: '8px' }} />
-        <div style={{ marginTop: '1rem' }}>
-          {!isEditing ? (
-            <button onClick={() => setIsEditing(true)} style={{ width: '100%', padding: '10px', background: '#0078d4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
-          ) : (
-            <>
-              <button onClick={handleSave} style={{ width: '100%', padding: '10px', background: 'green', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginBottom: '0.5rem' }}>Save</button>
-              <button onClick={() => setIsEditing(false)} style={{ width: '100%', padding: '10px', background: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
-            </>
-          )}
-          <button onClick={handleDelete} style={{ width: '100%', padding: '10px', background: 'darkred', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '0.5rem' }}>Delete</button>
+    <div style={{ display: 'flex', height: 'calc(100vh - 48px)', padding: '1rem', gap: '1rem' }}>
+      {/* Left Panel: Avatar & Actions */}
+      <div style={{ flex: '0 0 300px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <img src={`http://localhost:3001${card.imageUrl}`} alt={card.name} style={{ width: '100%', borderRadius: '8px' }} />
+        
+        {/* Card Info Box */}
+        <div style={{ background: '#2b2b2b', padding: '1rem', borderRadius: '8px', color: '#ccc' }}>
+            <p><strong>Filename:</strong> {card.originalFilename || 'N/A'}</p>
+            {/* Placeholder for dimensions and spec */}
+            <p><strong>Dimensions:</strong> N/A</p>
+            <p><strong>Spec Version:</strong> {card.spec || 'N/A'}</p>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {!isEditing ? (
+                <button onClick={() => setIsEditing(true)} style={{ padding: '10px', background: '#0078d4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+            ) : (
+                <>
+                    <button onClick={handleSave} style={{ padding: '10px', background: 'green', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Save</button>
+                    <button onClick={() => { setIsEditing(false); setEditableCard(card); }} style={{ padding: '10px', background: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                </>
+            )}
+            <button onClick={handleDownloadPng} style={{ padding: '10px', background: '#1a4a7e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Download PNG</button>
+            <button onClick={handleDownloadJson} style={{ padding: '10px', background: '#1a4a7e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Download JSON</button>
+            <button onClick={handleDuplicate} style={{ padding: '10px', background: '#7e571a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Duplicate Card</button>
+            <button onClick={handleDelete} style={{ padding: '10px', background: 'darkred', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete Card</button>
         </div>
       </div>
 
@@ -210,7 +267,7 @@ const CardDetails: React.FC = () => {
             <TabButton label="Details" isActive={activeTab === 'details'} onClick={() => setActiveTab('details')} />
           </div>
         )}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: '1rem' }}>
             {renderContent()}
         </div>
       </div>

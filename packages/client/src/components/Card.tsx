@@ -8,12 +8,12 @@ interface CardProps {
 }
 
 export const Card: React.FC<CardProps> = ({ card }) => {
-  const imageUrl = `http://localhost:3001/api/images/${card.image}`;
+  const fullImageUrl = `http://localhost:3001${card.imageUrl}`;
 
   return (
     <Link to={`/card/${card.id}`} className={styles.cardLink}>
       <div className={styles.card}>
-        <img src={imageUrl} alt={card.name} className={styles.cardImage} />
+        <img src={fullImageUrl} alt={card.name} className={styles.cardImage} />
         <div className={styles.cardOverlay}>
           <div className={styles.cardHeader}>
             <span className={styles.creator}>@{card.creator || 'Unknown'}</span>

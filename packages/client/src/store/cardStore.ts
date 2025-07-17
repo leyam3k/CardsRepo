@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export interface Card {
   id: string;
-  image: string;
+  imageUrl: string;
   name: string;
   description: string;
   creator?: string;
