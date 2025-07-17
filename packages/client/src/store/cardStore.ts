@@ -29,28 +29,39 @@ interface CardStore {
   cards: Card[];
   searchTerm: string;
   selectedTags: string[];
-  sortOrder: string;
+  sortBy: string;
+  sortDirection: string;
   startDate: string;
   endDate: string;
+  dateFilterType: string;
   availableTags: string[];
+  tagSearch: string;
   fetchAvailableTags: () => Promise<void>;
   addCard: (card: Card) => void;
   setCards: (cards: Card[]) => void;
   setSearchTerm: (term: string) => void;
+  setTagSearch: (term: string) => void;
+  clearTagFilters: () => void;
   toggleTag: (tag: string) => void;
-  setSortOrder: (order: string) => void;
+  setSortBy: (field: string) => void;
+  setSortDirection: (direction: string) => void;
   setStartDate: (date: string) => void;
   setEndDate: (date: string) => void;
+  setDateFilterType: (type: string) => void;
+  clearDateFilters: () => void;
 }
 
 export const useCardStore = create<CardStore>((set, get) => ({
   cards: [],
   searchTerm: '',
   selectedTags: [],
-  sortOrder: 'date-desc', // Default sort order
+  sortBy: 'importDate',
+  sortDirection: 'desc',
   startDate: '',
   endDate: '',
+  dateFilterType: 'importDate',
   availableTags: [],
+  tagSearch: '',
   fetchAvailableTags: async () => {
     try {
       const response = await fetch('http://localhost:3001/api/tags');
@@ -72,9 +83,14 @@ export const useCardStore = create<CardStore>((set, get) => ({
   },
   setCards: (cards) => set(() => ({ cards })),
   setSearchTerm: (term) => set({ searchTerm: term }),
-  setSortOrder: (order) => set({ sortOrder: order }),
+  setTagSearch: (term) => set({ tagSearch: term }),
+  clearTagFilters: () => set({ selectedTags: [], tagSearch: '' }),
+  setSortBy: (field) => set({ sortBy: field }),
+  setSortDirection: (direction) => set({ sortDirection: direction }),
   setStartDate: (date) => set({ startDate: date }),
   setEndDate: (date) => set({ endDate: date }),
+  setDateFilterType: (type) => set({ dateFilterType: type }),
+  clearDateFilters: () => set({ startDate: '', endDate: '' }),
   toggleTag: (tag) => set((state) => {
     const { selectedTags } = state;
     if (selectedTags.includes(tag)) {

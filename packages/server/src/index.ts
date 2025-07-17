@@ -152,29 +152,52 @@ app.get('/api/cards', async (req, res) => {
     }
     
     // Apply date range filter
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, dateFilterType } = req.query;
+    const dateField = dateFilterType === 'lastModified' ? 'lastModified' : 'importDate';
+
     if (startDate) {
         // By appending T00:00:00, we force JS to parse it in the server's local timezone,
         // which we assume is the same as the user's.
         const start = new Date(startDate as string + 'T00:00:00');
-        cards = cards.filter(card => card.importDate && new Date(card.importDate) >= start);
+        cards = cards.filter(card => card[dateField] && new Date(card[dateField]) >= start);
     }
     if (endDate) {
         // Set the time to the very end of the selected day.
         const end = new Date(endDate as string + 'T23:59:59');
-        cards = cards.filter(card => card.importDate && new Date(card.importDate) <= end);
+        cards = cards.filter(card => card[dateField] && new Date(card[dateField]) <= end);
     }
 
     // Apply sort order
-    const { sortOrder } = req.query;
-    if (sortOrder === 'date-asc') {
-        cards.sort((a, b) => new Date(a.importDate).getTime() - new Date(b.importDate).getTime());
-    } else if (sortOrder === 'date-desc') {
-        cards.sort((a, b) => new Date(b.importDate).getTime() - new Date(a.importDate).getTime());
-    } else if (sortOrder === 'name-asc') {
-        cards.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortOrder === 'name-desc') {
-        cards.sort((a, b) => b.name.localeCompare(a.name));
+    const { sortBy, sortDirection } = req.query;
+
+    if (sortBy) {
+        cards.sort((a, b) => {
+            let valA, valB;
+
+            switch (sortBy) {
+                case 'name':
+                    valA = a.name.toLowerCase();
+                    valB = b.name.toLowerCase();
+                    break;
+                case 'lastModified':
+                    valA = new Date(a.lastModified || 0).getTime();
+                    valB = new Date(b.lastModified || 0).getTime();
+                    break;
+                case 'importDate':
+                default:
+                    valA = new Date(a.importDate || 0).getTime();
+                    valB = new Date(b.importDate || 0).getTime();
+                    break;
+            }
+
+            if (valA < valB) {
+                return sortDirection === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return sortDirection === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
     }
 
 

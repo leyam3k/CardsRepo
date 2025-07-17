@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useCardStore } from '../store/cardStore';
 import styles from './FilterBar.module.css';
 
@@ -9,14 +9,21 @@ export const FilterBar: React.FC = () => {
     fetchAvailableTags,
     selectedTags,
     toggleTag,
-    sortOrder,
-    setSortOrder,
+    sortBy,
+    setSortBy,
+    sortDirection,
+    setSortDirection,
     startDate,
     setStartDate,
     endDate,
-    setEndDate
+    setEndDate,
+    dateFilterType,
+    setDateFilterType,
+    tagSearch,
+    setTagSearch,
+    clearTagFilters,
+    clearDateFilters,
   } = useCardStore();
-  const [tagSearch, setTagSearch] = useState('');
 
   useEffect(() => {
     fetchAvailableTags();
@@ -37,6 +44,7 @@ export const FilterBar: React.FC = () => {
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
             />
+            <button onClick={clearTagFilters} className={styles.clearButton}>Clear</button>
         </div>
         <div className={styles.tagList}>
             {selectedTags.map(tag => (
@@ -64,17 +72,37 @@ export const FilterBar: React.FC = () => {
       <div className={styles.controls}>
         <span className={styles.characterCount}>{cardCount} characters</span>
         <div className={styles.dateFilters}>
+            <select className={styles.sortDropdown} value={dateFilterType} onChange={e => setDateFilterType(e.target.value)}>
+                <option value="importDate">Imported</option>
+                <option value="lastModified">Last Modified</option>
+                {/* Future options:
+                <option value="downloaded">Downloaded</option>
+                <option value="created">Created (JSON)</option>
+                <option value="modified">Modified (JSON)</option>
+                */}
+            </select>
             <label>From:</label>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={styles.dateInput} />
             <label>To:</label>
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={styles.dateInput} />
+            <button onClick={clearDateFilters} className={styles.clearButton}>Clear</button>
         </div>
-        <select className={styles.sortDropdown} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
-          <option value="date-desc">Newest First</option>
-          <option value="date-asc">Oldest First</option>
-          <option value="name-asc">Name (A-Z)</option>
-          <option value="name-desc">Name (Z-A)</option>
-        </select>
+        <div className={styles.sortControls}>
+            <select className={styles.sortDropdown} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="importDate">Import Date</option>
+                <option value="lastModified">Modified Date</option>
+                <option value="name">Name</option>
+                {/* Future options:
+                <option value="downloadDate">Download Date</option>
+                <option value="creationDate">Creation Date (JSON)</option>
+                <option value="modifiedDate">Modified Date (JSON)</option>
+                */}
+            </select>
+            <select className={styles.sortDropdown} value={sortDirection} onChange={e => setSortDirection(e.target.value)}>
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+            </select>
+        </div>
       </div>
     </div>
   );

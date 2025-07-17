@@ -28,10 +28,10 @@
 
 .tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   align-items: center;
+  gap: 1rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .tagButton {
@@ -66,6 +66,63 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.tagSearchContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tagSearchInput {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  width: 200px;
+}
+
+.tagList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.dateFilters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dateInput {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+}
+
+.clearButton {
+    background: none;
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    height: 100%;
+}
+
+.clearButton:hover {
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.sortControls {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .characterCount {

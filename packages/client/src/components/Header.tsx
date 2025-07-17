@@ -20,7 +20,7 @@ export const Header: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <button className={styles.resetButton} onClick={() => setSearchTerm('')}>Reset</button>
+        <button className={styles.resetButton} onClick={() => setSearchTerm('')}>Clear</button>
       </div>
       <div className={styles.right}>
         <UploadCard />
