@@ -59,6 +59,9 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
             ...parsedCharacterData,
             creator: finalCreator,
             tags: parsedCharacterData.tags || [], // Ensure tags is an array
+            importDate: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            originalFilename: req.file.originalname,
         };
         // Save character data as card.json
         const cardFilePath = path_1.default.join(cardDir, 'card.json');
@@ -103,6 +106,28 @@ app.get('/api/cards', async (req, res) => {
         if (tagsQuery) {
             const requiredTags = tagsQuery.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean);
             cards = cards.filter(card => requiredTags.every(reqTag => card.tags?.map((t) => t.toLowerCase()).includes(reqTag)));
+        }
+        // Apply date range filter
+        const { startDate, endDate } = req.query;
+        if (startDate) {
+            cards = cards.filter(card => card.importDate && new Date(card.importDate) >= new Date(startDate));
+        }
+        if (endDate) {
+            cards = cards.filter(card => card.importDate && new Date(card.importDate) <= new Date(endDate));
+        }
+        // Apply sort order
+        const { sortOrder } = req.query;
+        if (sortOrder === 'date-asc') {
+            cards.sort((a, b) => new Date(a.importDate).getTime() - new Date(b.importDate).getTime());
+        }
+        else if (sortOrder === 'date-desc') {
+            cards.sort((a, b) => new Date(b.importDate).getTime() - new Date(a.importDate).getTime());
+        }
+        else if (sortOrder === 'name-asc') {
+            cards.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        else if (sortOrder === 'name-desc') {
+            cards.sort((a, b) => b.name.localeCompare(a.name));
         }
         res.json(cards);
     }
@@ -157,7 +182,7 @@ app.put('/api/cards/:id', async (req, res) => {
         const existingContent = await fs_1.promises.readFile(cardFilePath, 'utf-8');
         const existingCard = JSON.parse(existingContent);
         // Merge new data with existing data
-        const newCardData = { ...existingCard, ...updatedCardData, id: id }; // Ensure ID is not changed
+        const newCardData = { ...existingCard, ...updatedCardData, id: id, lastModified: new Date().toISOString() }; // Ensure ID is not changed and update timestamp
         // Write the updated data back to the file
         await fs_1.promises.writeFile(cardFilePath, JSON.stringify(newCardData, null, 2));
         res.json({ message: 'Card updated successfully', card: transformCardDataForClient(newCardData) });
@@ -212,6 +237,8 @@ app.post('/api/cards/:id/duplicate', async (req, res) => {
         const cardData = JSON.parse(cardContent);
         cardData.id = newCardId;
         cardData.name = `${cardData.name} (Copy)`; // Add suffix to name
+        cardData.importDate = new Date().toISOString();
+        cardData.lastModified = new Date().toISOString();
         await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
         res.status(201).json({ message: 'Card duplicated successfully', card: transformCardDataForClient(cardData) });
     }

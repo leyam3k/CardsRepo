@@ -235,11 +235,12 @@ const CardDetails: React.FC = () => {
         <img src={`http://localhost:3001${card.imageUrl}`} alt={card.name} style={{ width: '100%', borderRadius: '8px' }} />
         
         {/* Card Info Box */}
-        <div style={{ background: '#2b2b2b', padding: '1rem', borderRadius: '8px', color: '#ccc' }}>
+        <div style={{ background: '#2b2b2b', padding: '1rem', borderRadius: '8px', color: '#ccc', fontSize: '0.9rem' }}>
             <p><strong>Filename:</strong> {card.originalFilename || 'N/A'}</p>
-            {/* Placeholder for dimensions and spec */}
-            <p><strong>Dimensions:</strong> N/A</p>
             <p><strong>Spec Version:</strong> {card.spec || 'N/A'}</p>
+            <hr style={{ border: '1px solid #444', margin: '0.5rem 0' }} />
+            <p><strong>Imported:</strong> {card.importDate ? new Date(card.importDate).toLocaleString() : 'N/A'}</p>
+            <p><strong>Modified:</strong> {card.lastModified ? new Date(card.lastModified).toLocaleString() : 'N/A'}</p>
         </div>
 
         {/* Action Buttons */}

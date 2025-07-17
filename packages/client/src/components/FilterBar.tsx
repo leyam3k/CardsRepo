@@ -5,8 +5,16 @@ import styles from './FilterBar.module.css';
 export const FilterBar: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const cardCount = useCardStore((state) => state.cards.length);
-  const selectedTags = useCardStore((state) => state.selectedTags);
-  const toggleTag = useCardStore((state) => state.toggleTag);
+  const {
+    selectedTags,
+    toggleTag,
+    sortOrder,
+    setSortOrder,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate
+  } = useCardStore();
   const [tagSearch, setTagSearch] = useState('');
 
   useEffect(() => {
@@ -67,9 +75,17 @@ export const FilterBar: React.FC = () => {
       </div>
       <div className={styles.controls}>
         <span className={styles.characterCount}>{cardCount} characters</span>
-        <select className={styles.sortDropdown}>
-          <option>Popular</option>
-          <option>Latest</option>
+        <div className={styles.dateFilters}>
+            <label>From:</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={styles.dateInput} />
+            <label>To:</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={styles.dateInput} />
+        </div>
+        <select className={styles.sortDropdown} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+          <option value="name-asc">Name (A-Z)</option>
+          <option value="name-desc">Name (Z-A)</option>
         </select>
       </div>
     </div>
