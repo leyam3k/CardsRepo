@@ -4,7 +4,7 @@ import { Card as CardComponent } from '../components/Card';
 import styles from './CardGallery.module.css';
 
 const CardGallery: React.FC = () => {
-  const { cards, setCards, searchTerm, selectedTags, sortOrder, startDate, endDate, fetchAvailableTags } = useCardStore();
+  const { cards, setCards, searchTerm, selectedTags, sortBy, sortDirection, startDate, endDate, dateFilterType, fetchAvailableTags } = useCardStore();
 
   useEffect(() => {
     fetchAvailableTags();
@@ -20,15 +20,16 @@ const CardGallery: React.FC = () => {
         if (selectedTags.length > 0) {
           queryParams.append('tags', selectedTags.join(','));
         }
-        if (sortOrder) {
-          queryParams.append('sortOrder', sortOrder);
-        }
+        queryParams.append('sortBy', sortBy);
+        queryParams.append('sortDirection', sortDirection);
+
         if (startDate) {
           queryParams.append('startDate', startDate);
         }
         if (endDate) {
           queryParams.append('endDate', endDate);
         }
+        queryParams.append('dateFilterType', dateFilterType);
 
         const response = await fetch(`http://localhost:3001/api/cards?${queryParams.toString()}`);
         if (response.ok) {
@@ -50,7 +51,7 @@ const CardGallery: React.FC = () => {
     return () => {
       clearTimeout(handler);
     };
-  }, [setCards, searchTerm, selectedTags, sortOrder, startDate, endDate]);
+  }, [setCards, searchTerm, selectedTags, sortBy, sortDirection, startDate, endDate, dateFilterType]);
 
   return (
     <div className={styles.galleryPage}>
