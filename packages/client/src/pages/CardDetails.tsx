@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import FullScreenTextEditor from '../components/FullScreenTextEditor';
 import TagInput from '../components/TagInput';
-import { type Card } from '../store/cardStore';
+import { useCardStore, type Card } from '../store/cardStore';
 
 const TabButton: React.FC<{
   label: string;
@@ -28,13 +28,13 @@ const TabButton: React.FC<{
 const CardDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const fetchAvailableTags = useCardStore((state) => state.fetchAvailableTags);
   const [card, setCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editableCard, setEditableCard] = useState<Card | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
-  const [showCopiedBadge, setShowCopiedBadge] = useState(false);
 
   useEffect(() => {
     const fetchCardDetails = async () => {
@@ -139,6 +139,7 @@ const CardDetails: React.FC = () => {
         setEditableCard(updatedCard.card);
         setIsEditing(false);
         alert('Card updated successfully!');
+        fetchAvailableTags(); // Re-fetch tags to update the global list
       } else {
         alert('Failed to update card.');
       }
@@ -169,20 +170,7 @@ const CardDetails: React.FC = () => {
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
             {displayCard.name}
-            {showCopiedBadge && (
-                <span style={{
-                    marginLeft: '1rem',
-                    fontSize: '1rem',
-                    fontWeight: 'normal',
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    animation: 'fadeInOut 3s forwards'
-                }}>
-                    Copied
-                </span>
-            )}
+            {displayCard.isCopy && <span style={{ color: '#aaa', marginLeft: '1rem', fontSize: '1.2rem', fontWeight: 'normal' }}>(Copy)</span>}
           </h1>
           <p><strong>Creator:</strong> {displayCard.creator}</p>
           <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>

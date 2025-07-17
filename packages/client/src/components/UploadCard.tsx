@@ -1,6 +1,5 @@
 import React, { useCallback, useRef } from 'react';
 import { useCardStore } from '../store/cardStore';
-import { Png } from '../lib/card-parser';
 import styles from './UploadCard.module.css';
 
 const UploadCard: React.FC = () => {

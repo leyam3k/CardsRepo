@@ -22,6 +22,7 @@ export interface Card {
   // Fields for future phases
   importDate?: string;
   lastModified?: string;
+  isCopy?: boolean;
 }
 
 interface CardStore {

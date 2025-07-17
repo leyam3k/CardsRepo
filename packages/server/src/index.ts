@@ -18,10 +18,31 @@ const upload = multer({
   },
 });
 
-const cardsDir = path.join(__dirname, '../data/cards');
+const dataDir = path.join(__dirname, '../data');
+const cardsDir = path.join(dataDir, 'cards');
+const tagsFilePath = path.join(dataDir, 'tags.json');
 
 // Ensure data directories exist
 fs.mkdir(cardsDir, { recursive: true }).catch(console.error);
+
+// Helper function to read and write to the global tags file
+const getGlobalTags = async (): Promise<string[]> => {
+    try {
+        await fs.access(tagsFilePath);
+        const fileContent = await fs.readFile(tagsFilePath, 'utf-8');
+        return JSON.parse(fileContent);
+    } catch (error) {
+        // If the file doesn't exist, return an empty array
+        return [];
+    }
+};
+
+const updateGlobalTags = async (newTags: string[]) => {
+    if (newTags.length === 0) return;
+    const existingTags = await getGlobalTags();
+    const allTags = new Set([...existingTags, ...newTags]);
+    await fs.writeFile(tagsFilePath, JSON.stringify(Array.from(allTags).sort(), null, 2));
+};
 
 // Helper function to add derived properties for the client
 const transformCardDataForClient = (cardData: any) => {
@@ -74,6 +95,11 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
     // Save character data as card.json
     const cardFilePath = path.join(cardDir, 'card.json');
     await fs.writeFile(cardFilePath, JSON.stringify(cardToSave, null, 2));
+    
+    // Update the global tags list with any new tags from this card
+    if (cardToSave.tags.length > 0) {
+        await updateGlobalTags(cardToSave.tags);
+    }
 
     res.status(201).json({ message: 'Card uploaded successfully', card: transformCardDataForClient(cardToSave) });
   } catch (error) {
@@ -161,23 +187,8 @@ app.get('/api/cards', async (req, res) => {
 
 app.get('/api/tags', async (req, res) => {
   try {
-    const cardIdFolders = await fs.readdir(cardsDir);
-    const allTags = new Set<string>();
-
-    for (const cardId of cardIdFolders) {
-        try {
-            const cardJsonPath = path.join(cardsDir, cardId, 'card.json');
-            const content = await fs.readFile(cardJsonPath, 'utf-8');
-            const cardData = JSON.parse(content);
-            if (cardData.tags && Array.isArray(cardData.tags)) {
-                cardData.tags.forEach((tag: string) => allTags.add(tag));
-            }
-        } catch (error) {
-            // Ignore folders that don't contain a valid card.json
-            continue;
-        }
-    }
-    res.json(Array.from(allTags).sort());
+    const tags = await getGlobalTags();
+    res.json(tags);
   } catch (error) {
     console.error('Error fetching tags:', error);
     res.status(500).send('Internal server error.');
@@ -211,6 +222,12 @@ app.put('/api/cards/:id', async (req, res) => {
 
     // Write the updated data back to the file
     await fs.writeFile(cardFilePath, JSON.stringify(newCardData, null, 2));
+
+    // Also update the global tag list with any new tags
+    if (newCardData.tags && newCardData.tags.length > 0) {
+        await updateGlobalTags(newCardData.tags);
+    }
+
     res.json({ message: 'Card updated successfully', card: transformCardDataForClient(newCardData) });
   } catch (error: any) {
     if (error.code === 'ENOENT') {
@@ -267,7 +284,7 @@ app.post('/api/cards/:id/duplicate', async (req, res) => {
     const cardContent = await fs.readFile(cardJsonPath, 'utf-8');
     const cardData = JSON.parse(cardContent);
     cardData.id = newCardId;
-    cardData.name = `${cardData.name} (Copy)`; // Add suffix to name 
+    cardData.isCopy = true; // Flag the card as a copy
     cardData.importDate = new Date().toISOString();
     cardData.lastModified = new Date().toISOString();
     await fs.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));

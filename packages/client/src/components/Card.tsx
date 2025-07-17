@@ -19,7 +19,10 @@ export const Card: React.FC<CardProps> = ({ card }) => {
             <span className={styles.creator}>@{card.creator || 'Unknown'}</span>
           </div>
           <div className={styles.cardContent}>
-            <h3 className={styles.cardName}>{card.name}</h3>
+            <h3 className={styles.cardName}>
+              {card.name}
+              {card.isCopy && <span style={{ color: '#aaa', marginLeft: '8px' }}>(Copy)</span>}
+            </h3>
             <p className={styles.cardDescription}>{card.description}</p>
             <div className={styles.cardTags}>
               {card.tags?.map(tag => (
