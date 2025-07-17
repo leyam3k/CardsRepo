@@ -3,9 +3,10 @@ import { useCardStore } from '../store/cardStore';
 import styles from './FilterBar.module.css';
 
 export const FilterBar: React.FC = () => {
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const cardCount = useCardStore((state) => state.cards.length);
   const {
+    availableTags,
+    fetchAvailableTags,
     selectedTags,
     toggleTag,
     sortOrder,
@@ -18,21 +19,8 @@ export const FilterBar: React.FC = () => {
   const [tagSearch, setTagSearch] = useState('');
 
   useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/tags');
-        if (response.ok) {
-          const tags = await response.json();
-          setAvailableTags(tags);
-        } else {
-          console.error('Failed to fetch tags');
-        }
-      } catch (error) {
-        console.error('Error fetching tags:', error);
-      }
-    };
-    fetchTags();
-  }, []);
+    fetchAvailableTags();
+  }, [fetchAvailableTags]);
 
   return (
     <div className={styles.filterBar}>

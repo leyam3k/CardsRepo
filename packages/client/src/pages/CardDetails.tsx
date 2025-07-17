@@ -34,6 +34,7 @@ const CardDetails: React.FC = () => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editableCard, setEditableCard] = useState<Card | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [showCopiedBadge, setShowCopiedBadge] = useState(false);
 
   useEffect(() => {
     const fetchCardDetails = async () => {
@@ -166,7 +167,23 @@ const CardDetails: React.FC = () => {
     if (!isEditing) {
       return (
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{displayCard.name}</h1>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+            {displayCard.name}
+            {showCopiedBadge && (
+                <span style={{
+                    marginLeft: '1rem',
+                    fontSize: '1rem',
+                    fontWeight: 'normal',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    animation: 'fadeInOut 3s forwards'
+                }}>
+                    Copied
+                </span>
+            )}
+          </h1>
           <p><strong>Creator:</strong> {displayCard.creator}</p>
           <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
             {displayCard.tags.map(tag => (

@@ -31,6 +31,8 @@ interface CardStore {
   sortOrder: string;
   startDate: string;
   endDate: string;
+  availableTags: string[];
+  fetchAvailableTags: () => Promise<void>;
   addCard: (card: Card) => void;
   setCards: (cards: Card[]) => void;
   setSearchTerm: (term: string) => void;
@@ -40,14 +42,33 @@ interface CardStore {
   setEndDate: (date: string) => void;
 }
 
-export const useCardStore = create<CardStore>((set) => ({
+export const useCardStore = create<CardStore>((set, get) => ({
   cards: [],
   searchTerm: '',
   selectedTags: [],
   sortOrder: 'date-desc', // Default sort order
   startDate: '',
   endDate: '',
-  addCard: (card) => set((state) => ({ cards: [...state.cards, card] })),
+  availableTags: [],
+  fetchAvailableTags: async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/tags');
+      if (response.ok) {
+        const tags = await response.json();
+        set({ availableTags: tags });
+      } else {
+        console.error('Failed to fetch tags');
+      }
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  },
+  addCard: (card) => {
+    set((state) => ({ cards: [card, ...state.cards] }));
+    // After adding a card, we should refresh the tags list
+    // in case new tags were introduced.
+    get().fetchAvailableTags();
+  },
   setCards: (cards) => set(() => ({ cards })),
   setSearchTerm: (term) => set({ searchTerm: term }),
   setSortOrder: (order) => set({ sortOrder: order }),

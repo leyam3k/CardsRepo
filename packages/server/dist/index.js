@@ -110,10 +110,15 @@ app.get('/api/cards', async (req, res) => {
         // Apply date range filter
         const { startDate, endDate } = req.query;
         if (startDate) {
-            cards = cards.filter(card => card.importDate && new Date(card.importDate) >= new Date(startDate));
+            // By appending T00:00:00, we force JS to parse it in the server's local timezone,
+            // which we assume is the same as the user's.
+            const start = new Date(startDate + 'T00:00:00');
+            cards = cards.filter(card => card.importDate && new Date(card.importDate) >= start);
         }
         if (endDate) {
-            cards = cards.filter(card => card.importDate && new Date(card.importDate) <= new Date(endDate));
+            // Set the time to the very end of the selected day.
+            const end = new Date(endDate + 'T23:59:59');
+            cards = cards.filter(card => card.importDate && new Date(card.importDate) <= end);
         }
         // Apply sort order
         const { sortOrder } = req.query;
@@ -236,7 +241,7 @@ app.post('/api/cards/:id/duplicate', async (req, res) => {
         const cardContent = await fs_1.promises.readFile(cardJsonPath, 'utf-8');
         const cardData = JSON.parse(cardContent);
         cardData.id = newCardId;
-        cardData.name = `${cardData.name} (Copy)`; // Add suffix to name
+        cardData.name = `${cardData.name} (Copy)`; // Add suffix to name 
         cardData.importDate = new Date().toISOString();
         cardData.lastModified = new Date().toISOString();
         await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));

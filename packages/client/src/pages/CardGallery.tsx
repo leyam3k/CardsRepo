@@ -4,7 +4,11 @@ import { Card as CardComponent } from '../components/Card';
 import styles from './CardGallery.module.css';
 
 const CardGallery: React.FC = () => {
-  const { cards, setCards, searchTerm, selectedTags, sortOrder, startDate, endDate } = useCardStore();
+  const { cards, setCards, searchTerm, selectedTags, sortOrder, startDate, endDate, fetchAvailableTags } = useCardStore();
+
+  useEffect(() => {
+    fetchAvailableTags();
+  }, [fetchAvailableTags]);
 
   useEffect(() => {
     const fetchCards = async () => {
