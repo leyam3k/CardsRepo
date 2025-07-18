@@ -95,6 +95,8 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
             nickname: sourceData.nickname || '',
             group_only_greetings: sourceData.group_only_greetings || [],
             extensions: sourceData.extensions || {},
+            assets: sourceData.assets || [],
+            creator_notes_multilingual: sourceData.creator_notes_multilingual || {},
             // Organization
             tags: sourceData.tags || [],
             creator: finalCreator,

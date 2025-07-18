@@ -161,7 +161,13 @@ app.get('/api/cards', async (req, res) => {
       cards = cards.filter(card =>
         card.name.toLowerCase().includes(lowerCaseSearchQuery) ||
         (card.description && card.description.toLowerCase().includes(lowerCaseSearchQuery)) ||
-        (card.creator && card.creator.toLowerCase().includes(lowerCaseSearchQuery))
+        (card.creator && card.creator.toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (card.nickname && card.nickname.toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (card.mes_example && card.mes_example.toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (card.system_prompt && card.system_prompt.toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (card.post_history_instructions && card.post_history_instructions.toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (card.alternate_greetings && card.alternate_greetings.join(' ').toLowerCase().includes(lowerCaseSearchQuery)) ||
+        (card.group_only_greetings && card.group_only_greetings.join(' ').toLowerCase().includes(lowerCaseSearchQuery))
       );
     }
 
