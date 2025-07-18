@@ -50,8 +50,8 @@ const transformCardDataForClient = (cardData) => {
     // Add the full URL for the card's image
     cardData.imageUrl = `/api/cards/${cardData.id}/image`;
     // If 'personality' exists and 'character' does not, map it for compatibility
-    if (cardData.personality && !cardData.character) {
-        cardData.character = cardData.personality;
+    if (cardData.personality && !cardData.character) { // This mapping is now deprecated, personality is the source of truth
+        // cardData.character = cardData.personality;
     }
     // Ensure tags is always an array
     if (!cardData.tags) {
@@ -74,14 +74,34 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
         const imageFilePath = path_1.default.join(cardDir, 'avatar.png');
         await fs_1.promises.writeFile(imageFilePath, buffer);
         // Prepare the final card data object
-        const finalCreator = parsedCharacterData.data?.creator || parsedCharacterData.creator || '';
+        // Extract V1 and V2 data, prioritizing the nested `data` object if it exists.
+        const sourceData = parsedCharacterData.data || parsedCharacterData;
+        const finalCreator = sourceData.creator || parsedCharacterData.creator || '';
+        // Explicitly construct the card object with only the fields we want to save.
+        // This prevents unused fields like 'spec' from being saved.
         const cardToSave = {
             id: cardId,
-            ...parsedCharacterData,
+            name: sourceData.name || '',
+            description: sourceData.description || '',
+            personality: sourceData.personality || '',
+            scenario: sourceData.scenario || '',
+            first_mes: sourceData.first_mes || '',
+            mes_example: sourceData.mes_example || '',
+            creator_notes: sourceData.creator_notes || '',
+            system_prompt: sourceData.system_prompt || '',
+            post_history_instructions: sourceData.post_history_instructions || '',
+            alternate_greetings: sourceData.alternate_greetings || [],
+            // New V2/V3 fields
+            nickname: sourceData.nickname || '',
+            group_only_greetings: sourceData.group_only_greetings || [],
+            extensions: sourceData.extensions || {},
+            // Organization
+            tags: sourceData.tags || [],
             creator: finalCreator,
-            tags: parsedCharacterData.tags || [], // Ensure tags is an array
-            importDate: new Date().toISOString(),
-            lastModified: new Date().toISOString(),
+            character_version: sourceData.character_version || '',
+            // Our own metadata (now as unix timestamps)
+            creation_date: Math.floor(Date.now() / 1000),
+            modification_date: Math.floor(Date.now() / 1000),
             originalFilename: req.file.originalname,
         };
         // Save character data as card.json
@@ -134,17 +154,17 @@ app.get('/api/cards', async (req, res) => {
         }
         // Apply date range filter
         const { startDate, endDate, dateFilterType } = req.query;
-        const dateField = dateFilterType === 'lastModified' ? 'lastModified' : 'importDate';
+        const dateField = dateFilterType === 'modification_date' ? 'modification_date' : 'creation_date';
         if (startDate) {
             // By appending T00:00:00, we force JS to parse it in the server's local timezone,
             // which we assume is the same as the user's.
             const start = new Date(startDate + 'T00:00:00');
-            cards = cards.filter(card => card[dateField] && new Date(card[dateField]) >= start);
+            cards = cards.filter(card => card[dateField] && (card[dateField] * 1000) >= start.getTime());
         }
         if (endDate) {
             // Set the time to the very end of the selected day.
             const end = new Date(endDate + 'T23:59:59');
-            cards = cards.filter(card => card[dateField] && new Date(card[dateField]) <= end);
+            cards = cards.filter(card => card[dateField] && (card[dateField] * 1000) <= end.getTime());
         }
         // Apply sort order
         const { sortBy, sortDirection } = req.query;
@@ -156,14 +176,14 @@ app.get('/api/cards', async (req, res) => {
                         valA = a.name.toLowerCase();
                         valB = b.name.toLowerCase();
                         break;
-                    case 'lastModified':
-                        valA = new Date(a.lastModified || 0).getTime();
-                        valB = new Date(b.lastModified || 0).getTime();
+                    case 'modification_date':
+                        valA = a.modification_date || 0;
+                        valB = b.modification_date || 0;
                         break;
-                    case 'importDate':
+                    case 'creation_date':
                     default:
-                        valA = new Date(a.importDate || 0).getTime();
-                        valB = new Date(b.importDate || 0).getTime();
+                        valA = a.creation_date || 0;
+                        valB = b.creation_date || 0;
                         break;
                 }
                 if (valA < valB) {
@@ -213,7 +233,7 @@ app.put('/api/cards/:id', async (req, res) => {
         const existingContent = await fs_1.promises.readFile(cardFilePath, 'utf-8');
         const existingCard = JSON.parse(existingContent);
         // Merge new data with existing data
-        const newCardData = { ...existingCard, ...updatedCardData, id: id, lastModified: new Date().toISOString() }; // Ensure ID is not changed and update timestamp
+        const newCardData = { ...existingCard, ...updatedCardData, id: id, modification_date: Math.floor(Date.now() / 1000) }; // Ensure ID is not changed and update timestamp
         // Write the updated data back to the file
         await fs_1.promises.writeFile(cardFilePath, JSON.stringify(newCardData, null, 2));
         // Also update the global tag list with any new tags
@@ -272,8 +292,8 @@ app.post('/api/cards/:id/duplicate', async (req, res) => {
         const cardData = JSON.parse(cardContent);
         cardData.id = newCardId;
         cardData.isCopy = true; // Flag the card as a copy
-        cardData.importDate = new Date().toISOString();
-        cardData.lastModified = new Date().toISOString();
+        cardData.creation_date = Math.floor(Date.now() / 1000);
+        cardData.modification_date = Math.floor(Date.now() / 1000);
         await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
         res.status(201).json({ message: 'Card duplicated successfully', card: transformCardDataForClient(cardData) });
     }

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import FullScreenTextEditor from '../components/FullScreenTextEditor';
 import TagInput from '../components/TagInput';
+import TextArrayEditor from '../components/TextArrayEditor';
+import JsonViewer from '../components/JsonViewer';
 import { useCardStore, type Card } from '../store/cardStore';
 
 const TabButton: React.FC<{
@@ -157,6 +159,10 @@ const CardDetails: React.FC = () => {
     setEditableCard(prev => (prev ? { ...prev, tags: newTags } : null));
   };
 
+  const handleArrayChange = (name: keyof Card, values: string[]) => {
+    setEditableCard(prev => (prev ? { ...prev, [name]: values } : null));
+  };
+
   if (loading) return <div style={{ padding: '2rem' }}>Loading...</div>;
   if (error) return <div style={{ padding: '2rem', color: 'red' }}>{error}</div>;
   if (!card || !editableCard) return <div style={{ padding: '2rem' }}>Card not found.</div>;
@@ -181,7 +187,7 @@ const CardDetails: React.FC = () => {
             ))}
           </div>
           <p><strong>Description:</strong> {displayCard.description}</p>
-          <p><strong>Personality:</strong> {displayCard.character}</p>
+          <p><strong>Personality:</strong> {displayCard.personality}</p>
           <p><strong>Scenario:</strong> {displayCard.scenario}</p>
           {/* Add other read-only fields here */}
         </div>
@@ -193,41 +199,67 @@ const CardDetails: React.FC = () => {
       case 'basic':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label>Name:</label>
-              <input type="text" name="name" value={editableCard.name || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <label style={{ flex: '0 0 120px' }}>Name:</label>
+              <input type="text" name="name" value={editableCard.name || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-            <div>
-              <label>Creator:</label>
-              <input type="text" name="creator" value={editableCard.creator || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <label style={{ flex: '0 0 120px' }}>Creator:</label>
+              <input type="text" name="creator" value={editableCard.creator || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-             <div>
-                <label>Tags:</label>
-                <TagInput selectedTags={editableCard.tags || []} onTagsChange={handleTagsChange} />
+             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <label style={{ flex: '0 0 120px' }}>Nickname:</label>
+                <input type="text" name="nickname" value={editableCard.nickname || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-            <div>
-              <label>Language:</label>
-              <input type="text" name="language" value={editableCard.language || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <label style={{ flex: '0 0 120px' }}>Character Version:</label>
+                <input type="text" name="character_version" value={editableCard.character_version || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-            <div>
-              <label>URL/Link:</label>
-              <input type="text" name="url" value={editableCard.url || ''} onChange={handleChange} style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <label style={{ flex: '0 0 120px', paddingTop: '8px' }}>Tags:</label>
+                <div style={{ flex: 1 }}>
+                    <TagInput selectedTags={editableCard.tags || []} onTagsChange={handleTagsChange} />
+                </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <label style={{ flex: '0 0 120px' }}>Language:</label>
+              <input type="text" name="language" value={editableCard.language || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <label style={{ flex: '0 0 120px' }}>URL/Link:</label>
+              <input type="text" name="url" value={editableCard.url || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
           </div>
         );
       case 'details':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <FullScreenTextEditor label="Description" value={editableCard.description || ''} onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="Personality" value={editableCard.character || ''} onChange={(value) => handleChange({ target: { name: 'character', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="Scenario" value={editableCard.scenario || ''} onChange={(value) => handleChange({ target: { name: 'scenario', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="First Message" value={editableCard.first_mes || ''} onChange={(value) => handleChange({ target: { name: 'first_mes', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="Message Example" value={editableCard.mes_example || ''} onChange={(value) => handleChange({ target: { name: 'mes_example', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="System Prompt" value={editableCard.system_prompt || ''} onChange={(value) => handleChange({ target: { name: 'system_prompt', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="Post History Instructions" value={editableCard.post_history_instructions || ''} onChange={(value) => handleChange({ target: { name: 'post_history_instructions', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
-            <FullScreenTextEditor label="Creator Notes" value={editableCard.creator_notes || ''} onChange={(value) => handleChange({ target: { name: 'creator_notes', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <FullScreenTextEditor label="Description" value={editableCard.description || ''} onChange={(value) => handleChange({ target: { name: 'description', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+                <FullScreenTextEditor label="Personality" value={editableCard.personality || ''} onChange={(value) => handleChange({ target: { name: 'personality', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+                <FullScreenTextEditor label="Scenario" value={editableCard.scenario || ''} onChange={(value) => handleChange({ target: { name: 'scenario', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+                <FullScreenTextEditor label="First Message" value={editableCard.first_mes || ''} onChange={(value) => handleChange({ target: { name: 'first_mes', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+                <FullScreenTextEditor label="Message Example" value={editableCard.mes_example || ''} onChange={(value) => handleChange({ target: { name: 'mes_example', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArrayEditor label="Alternate Greetings" values={editableCard.alternate_greetings || []} onChange={(values) => handleArrayChange('alternate_greetings', values)} />
+                <TextArrayEditor label="Group Only Greetings" values={editableCard.group_only_greetings || []} onChange={(values) => handleArrayChange('group_only_greetings', values)} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <FullScreenTextEditor label="System Prompt" value={editableCard.system_prompt || ''} onChange={(value) => handleChange({ target: { name: 'system_prompt', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+                <FullScreenTextEditor label="Post History Instructions" value={editableCard.post_history_instructions || ''} onChange={(value) => handleChange({ target: { name: 'post_history_instructions', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+                <FullScreenTextEditor label="Creator Notes" value={editableCard.creator_notes || ''} onChange={(value) => handleChange({ target: { name: 'creator_notes', value } } as React.ChangeEvent<HTMLTextAreaElement>)} />
+            </div>
           </div>
         );
+      case 'advanced':
+       return (
+         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+           <JsonViewer label="Assets (JSON Array)" data={editableCard.assets} />
+           <JsonViewer label="Creator Notes Multilingual (JSON Object)" data={editableCard.creator_notes_multilingual} />
+           <JsonViewer label="Extensions (JSON Object)" data={editableCard.extensions} />
+         </div>
+       );
       default:
         return null;
     }
@@ -244,8 +276,8 @@ const CardDetails: React.FC = () => {
             <p><strong>Filename:</strong> {card.originalFilename || 'N/A'}</p>
             {/* <p><strong>Spec Version:</strong> {card.spec || 'N/A'}</p> */}
             <hr style={{ border: '1px solid #444', margin: '0.5rem 0' }} />
-            <p><strong>Imported:</strong> {card.importDate ? new Date(card.importDate).toLocaleString() : 'N/A'}</p>
-            <p><strong>Modified:</strong> {card.lastModified ? new Date(card.lastModified).toLocaleString() : 'N/A'}</p>
+            <p><strong>Imported:</strong> {card.creation_date ? new Date(card.creation_date * 1000).toLocaleString() : 'N/A'}</p>
+            <p><strong>Modified:</strong> {card.modification_date ? new Date(card.modification_date * 1000).toLocaleString() : 'N/A'}</p>
         </div>
 
         {/* Action Buttons */}
@@ -271,6 +303,7 @@ const CardDetails: React.FC = () => {
           <div style={{ borderBottom: '1px solid #444', paddingBottom: '0.5rem' }}>
             <TabButton label="Basic Info" isActive={activeTab === 'basic'} onClick={() => setActiveTab('basic')} />
             <TabButton label="Details" isActive={activeTab === 'details'} onClick={() => setActiveTab('details')} />
+            <TabButton label="Advanced" isActive={activeTab === 'advanced'} onClick={() => setActiveTab('advanced')} />
           </div>
         )}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: '1rem' }}>

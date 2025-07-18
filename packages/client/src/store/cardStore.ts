@@ -6,22 +6,31 @@ export interface Card {
   name: string;
   description: string;
   creator?: string;
-  character?: string;
+  // V2/V3 Spec fields
+  nickname?: string;
+  character_version?: string;
+  personality?: string; // Mapped from 'character'
   scenario?: string;
-  tags: string[];
-  // New fields for Phase 2
-  language?: string;
-  url?: string;
   first_mes?: string;
   mes_example?: string;
   system_prompt?: string;
   post_history_instructions?: string;
   creator_notes?: string;
+  alternate_greetings?: string[];
+  group_only_greetings?: string[];
+  // Organization
+  tags: string[];
+  language?: string;
+  url?: string;
+  // Metadata
   originalFilename?: string;
-  // Fields for future phases
-  importDate?: string;
-  lastModified?: string;
+  creation_date?: number; // Renamed from importDate, type changed to number
+  modification_date?: number; // Renamed from lastModified, type changed to number
+  // App-specific
   isCopy?: boolean;
+  extensions: Record<string, any>;
+  assets: any[]; // Using any[] for now, will be a typed array in Phase 3
+  creator_notes_multilingual: Record<string, string>;
 }
 
 interface CardStore {
