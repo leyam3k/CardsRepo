@@ -6,6 +6,39 @@ import TextArrayEditor from '../components/TextArrayEditor';
 import JsonViewer from '../components/JsonViewer';
 import { useCardStore, type Card } from '../store/cardStore';
 
+const convertToSpecV3 = (card: Card) => {
+// Create a deep copy to avoid modifying the original object
+const cardData = JSON.parse(JSON.stringify(card));
+
+// Remove app-specific fields that are not part of the spec's 'data' object
+const {
+  id,
+  imageUrl,
+  originalFilename,
+  isCopy,
+  ...data
+} = cardData;
+
+return {
+  spec: "chara_card_v3",
+  spec_version: "3.0",
+  data: {
+      ...data,
+      // Ensure required fields that might be empty are present
+      alternate_greetings: data.alternate_greetings || [],
+      group_only_greetings: data.group_only_greetings || [],
+      tags: data.tags || [],
+  },
+  metadata: {
+    tool: {
+      name: "CardsRepo",
+      version: "0.1.0", // Replace with actual app version if available
+    },
+    modified: Date.now(),
+  },
+};
+};
+
 const TabButton: React.FC<{
   label: string;
   isActive: boolean;
@@ -99,8 +132,9 @@ const CardDetails: React.FC = () => {
 
   const handleDownloadJson = () => {
     if (!card) return;
+    const specV3Card = convertToSpecV3(card);
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(card, null, 2)
+      JSON.stringify(specV3Card, null, 2)
     )}`;
     const link = document.createElement("a");
     link.href = jsonString;
