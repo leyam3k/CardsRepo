@@ -1,5 +1,4 @@
 node_modules
 
 # Ignore generated data
-packages/server/data/cards/
-packages/server/data/images/
+packages/server/data/

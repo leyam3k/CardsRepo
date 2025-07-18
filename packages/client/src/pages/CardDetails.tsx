@@ -225,9 +225,9 @@ const CardDetails: React.FC = () => {
               <label style={{ flex: '0 0 120px' }}>Language:</label>
               <input type="text" name="language" value={editableCard.language || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <label style={{ flex: '0 0 120px' }}>URL/Link:</label>
-              <input type="text" name="url" value={editableCard.url || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+              <label style={{ flex: '0 0 120px', paddingTop: '8px' }}>URL/Link:</label>
+              <textarea name="url" value={editableCard.url || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555', minHeight: '80px', resize: 'vertical' }} />
             </div>
           </div>
         );

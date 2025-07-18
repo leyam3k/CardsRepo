@@ -17,7 +17,7 @@ const TextArrayEditor: React.FC<TextArrayEditorProps> = ({ label, values, onChan
 
   useEffect(() => {
     setItems(values.map((value, index) => ({ id: `${index}-${Date.now()}`, value })));
-  }, [values]);
+  }, []);
 
   const handleItemChange = (id: string, newValue: string) => {
     const newItems = items.map(item => (item.id === id ? { ...item, value: newValue } : item));
