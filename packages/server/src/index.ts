@@ -20,10 +20,12 @@ const upload = multer({
 
 const dataDir = path.join(__dirname, '../data');
 const cardsDir = path.join(dataDir, 'cards');
+const publicDir = path.join(__dirname, '../public'); // Corrected path for public assets
 const tagsFilePath = path.join(dataDir, 'tags.json');
 
 // Ensure data directories exist
 fs.mkdir(cardsDir, { recursive: true }).catch(console.error);
+fs.mkdir(publicDir, { recursive: true }).catch(console.error);
 
 // Helper function to read and write to the global tags file
 const getGlobalTags = async (): Promise<string[]> => {
@@ -68,9 +70,22 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
   }
 
   try {
+    let parsedCharacterData;
     const buffer = req.file.buffer;
-    const characterDataString = Png.Parse(buffer.buffer);
-    const parsedCharacterData = JSON.parse(characterDataString);
+
+    // Handle JSON upload
+    if (req.file.mimetype === 'application/json') {
+      parsedCharacterData = JSON.parse(buffer.toString('utf-8'));
+    }
+    // Handle PNG upload
+    else if (req.file.mimetype === 'image/png') {
+      const characterDataString = Png.Parse(buffer.buffer);
+      parsedCharacterData = JSON.parse(characterDataString);
+    }
+    // Handle unsupported file types
+    else {
+      return res.status(400).send('Unsupported file type. Please upload a .png or .json file.');
+    }
 
     const cardId = uuidv4();
     const cardDir = path.join(cardsDir, cardId);
@@ -78,7 +93,18 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
 
     // Save the avatar image
     const imageFilePath = path.join(cardDir, 'avatar.png');
-    await fs.writeFile(imageFilePath, buffer);
+    if (req.file.mimetype === 'image/png') {
+        await fs.writeFile(imageFilePath, buffer);
+    } else {
+        // For JSON uploads, copy the default avatar.
+        const defaultAvatarPath = path.join(publicDir, 'default.png');
+        try {
+            await fs.copyFile(defaultAvatarPath, imageFilePath);
+        } catch (copyError) {
+            console.error("Could not find or copy default.png. Please ensure it exists in packages/server/public/default.png");
+            // You might want to handle this more gracefully, but for now we log and continue
+        }
+    }
 
     // Prepare the final card data object
     // Extract V1 and V2 data, prioritizing the nested `data` object if it exists.

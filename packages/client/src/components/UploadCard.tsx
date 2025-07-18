@@ -41,7 +41,7 @@ const UploadCard: React.FC = () => {
     <>
       <input
         type="file"
-        accept="image/png"
+        accept="image/png,application/json"
         onChange={handleFileUpload}
         ref={fileInputRef}
         style={{ display: 'none' }}

@@ -21,9 +21,11 @@ const upload = (0, multer_1.default)({
 });
 const dataDir = path_1.default.join(__dirname, '../data');
 const cardsDir = path_1.default.join(dataDir, 'cards');
+const publicDir = path_1.default.join(__dirname, '../public'); // Corrected path for public assets
 const tagsFilePath = path_1.default.join(dataDir, 'tags.json');
 // Ensure data directories exist
 fs_1.promises.mkdir(cardsDir, { recursive: true }).catch(console.error);
+fs_1.promises.mkdir(publicDir, { recursive: true }).catch(console.error);
 // Helper function to read and write to the global tags file
 const getGlobalTags = async () => {
     try {
@@ -64,15 +66,40 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
         return res.status(400).send('No file uploaded.');
     }
     try {
+        let parsedCharacterData;
         const buffer = req.file.buffer;
-        const characterDataString = Png_1.Png.Parse(buffer.buffer);
-        const parsedCharacterData = JSON.parse(characterDataString);
+        // Handle JSON upload
+        if (req.file.mimetype === 'application/json') {
+            parsedCharacterData = JSON.parse(buffer.toString('utf-8'));
+        }
+        // Handle PNG upload
+        else if (req.file.mimetype === 'image/png') {
+            const characterDataString = Png_1.Png.Parse(buffer.buffer);
+            parsedCharacterData = JSON.parse(characterDataString);
+        }
+        // Handle unsupported file types
+        else {
+            return res.status(400).send('Unsupported file type. Please upload a .png or .json file.');
+        }
         const cardId = (0, uuid_1.v4)();
         const cardDir = path_1.default.join(cardsDir, cardId);
         await fs_1.promises.mkdir(cardDir, { recursive: true });
         // Save the avatar image
         const imageFilePath = path_1.default.join(cardDir, 'avatar.png');
-        await fs_1.promises.writeFile(imageFilePath, buffer);
+        if (req.file.mimetype === 'image/png') {
+            await fs_1.promises.writeFile(imageFilePath, buffer);
+        }
+        else {
+            // For JSON uploads, copy the default avatar.
+            const defaultAvatarPath = path_1.default.join(publicDir, 'default.png');
+            try {
+                await fs_1.promises.copyFile(defaultAvatarPath, imageFilePath);
+            }
+            catch (copyError) {
+                console.error("Could not find or copy default.png. Please ensure it exists in packages/server/public/default.png");
+                // You might want to handle this more gracefully, but for now we log and continue
+            }
+        }
         // Prepare the final card data object
         // Extract V1 and V2 data, prioritizing the nested `data` object if it exists.
         const sourceData = parsedCharacterData.data || parsedCharacterData;
