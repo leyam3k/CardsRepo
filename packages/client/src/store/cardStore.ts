@@ -18,7 +18,6 @@ export interface Card {
   post_history_instructions?: string;
   creator_notes?: string;
   originalFilename?: string;
-  spec?: string;
   // Fields for future phases
   importDate?: string;
   lastModified?: string;

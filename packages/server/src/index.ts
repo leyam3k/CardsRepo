@@ -81,15 +81,31 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
     await fs.writeFile(imageFilePath, buffer);
 
     // Prepare the final card data object
-    const finalCreator = parsedCharacterData.data?.creator || parsedCharacterData.creator || '';
+    // Extract V1 and V2 data, prioritizing the nested `data` object if it exists.
+    const sourceData = parsedCharacterData.data || parsedCharacterData;
+    const finalCreator = sourceData.creator || parsedCharacterData.creator || '';
+    
+    // Explicitly construct the card object with only the fields we want to save.
+    // This prevents unused fields like 'spec' from being saved.
     const cardToSave = {
-      id: cardId,
-      ...parsedCharacterData,
-      creator: finalCreator,
-      tags: parsedCharacterData.tags || [], // Ensure tags is an array
-      importDate: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      originalFilename: req.file.originalname,
+        id: cardId,
+        name: sourceData.name || '',
+        description: sourceData.description || '',
+        personality: sourceData.personality || '',
+        scenario: sourceData.scenario || '',
+        first_mes: sourceData.first_mes || '',
+        mes_example: sourceData.mes_example || '',
+        creator_notes: sourceData.creator_notes || '',
+        system_prompt: sourceData.system_prompt || '',
+        post_history_instructions: sourceData.post_history_instructions || '',
+        alternate_greetings: sourceData.alternate_greetings || [],
+        tags: sourceData.tags || [],
+        creator: finalCreator,
+        character_version: sourceData.character_version || '',
+        // Our own metadata
+        importDate: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        originalFilename: req.file.originalname,
     };
     
     // Save character data as card.json
