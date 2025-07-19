@@ -4,39 +4,65 @@ import FullScreenTextEditor from '../components/FullScreenTextEditor';
 import TagInput from '../components/TagInput';
 import TextArrayEditor from '../components/TextArrayEditor';
 import JsonViewer from '../components/JsonViewer';
-import { useCardStore, type Card } from '../store/cardStore';
+import CharacterBookEditor from '../components/CharacterBookEditor';
+import ToolTab from '../components/ToolTab';
+import FilesTab from '../components/FilesTab';
+import { useCardStore, type Card, type Lorebook } from '../store/cardStore';
 
-const convertToSpecV3 = (card: Card) => {
-// Create a deep copy to avoid modifying the original object
-const cardData = JSON.parse(JSON.stringify(card));
+const convertToSpec = (card: Card, specVersion: 'v2' | 'v3' | 'max') => {
+  // Create a deep copy to avoid modifying the original object
+  const cardData = JSON.parse(JSON.stringify(card));
 
-// Remove app-specific fields that are not part of the spec's 'data' object
-const {
-  id,
-  imageUrl,
-  originalFilename,
-  isCopy,
-  ...data
-} = cardData;
+  // Remove app-specific fields that are not part of the spec's 'data' object
+  const {
+    id,
+    imageUrl,
+    originalFilename,
+    isCopy,
+    ...data
+  } = cardData;
 
-return {
-  spec: "chara_card_v3",
-  spec_version: "3.0",
-  data: {
-      ...data,
-      // Ensure required fields that might be empty are present
-      alternate_greetings: data.alternate_greetings || [],
-      group_only_greetings: data.group_only_greetings || [],
-      tags: data.tags || [],
-  },
-  metadata: {
-    tool: {
-      name: "CardsRepo",
-      version: "0.1.0", // Replace with actual app version if available
+  if (specVersion === 'v2') {
+    // V2 spec does not include these fields in the data block
+    delete data.nickname;
+    delete data.group_only_greetings;
+    delete data.assets;
+    delete data.creator_notes_multilingual;
+    delete data.source;
+    delete data.creation_date;
+    delete data.modification_date;
+
+    return {
+      spec: 'chara_card_v2',
+      spec_version: '2.0',
+      data: {
+        ...data,
+        alternate_greetings: data.alternate_greetings || [],
+        tags: data.tags || [],
+        extensions: data.extensions || {},
+      },
+    };
+  }
+
+  // For v3 and max, we use the same structure for now
+  return {
+    spec: "chara_card_v3",
+    spec_version: "3.0",
+    data: {
+        ...data,
+        // Ensure required fields that might be empty are present
+        alternate_greetings: data.alternate_greetings || [],
+        group_only_greetings: data.group_only_greetings || [],
+        tags: data.tags || [],
     },
-    modified: Date.now(),
-  },
-};
+    metadata: {
+      tool: {
+        name: "CardsRepo",
+        version: "0.1.0", // Replace with actual app version if available
+      },
+      modified: Date.now(),
+    },
+  };
 };
 
 const TabButton: React.FC<{
@@ -70,6 +96,7 @@ const CardDetails: React.FC = () => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editableCard, setEditableCard] = useState<Card | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [specVersion, setSpecVersion] = useState('v3');
 
   useEffect(() => {
     const fetchCardDetails = async () => {
@@ -132,9 +159,9 @@ const CardDetails: React.FC = () => {
 
   const handleDownloadJson = () => {
     if (!card) return;
-    const specV3Card = convertToSpecV3(card);
+    const specCard = convertToSpec(card, specVersion as any);
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(specV3Card, null, 2)
+      JSON.stringify(specCard, null, 2)
     )}`;
     const link = document.createElement("a");
     link.href = jsonString;
@@ -195,6 +222,10 @@ const CardDetails: React.FC = () => {
 
   const handleArrayChange = (name: keyof Card, values: string[]) => {
     setEditableCard(prev => (prev ? { ...prev, [name]: values } : null));
+  };
+
+  const handleBookChange = (newBook: Lorebook) => {
+    setEditableCard(prev => (prev ? { ...prev, character_book: newBook } : null));
   };
 
   if (loading) return <div style={{ padding: '2rem' }}>Loading...</div>;
@@ -294,6 +325,17 @@ const CardDetails: React.FC = () => {
            <JsonViewer label="Extensions (JSON Object)" data={editableCard.extensions} />
          </div>
        );
+      case 'book':
+        return (
+            <CharacterBookEditor
+                book={editableCard.character_book}
+                onChange={handleBookChange}
+            />
+        );
+      case 'tool':
+        return <ToolTab card={editableCard} />;
+      case 'files':
+        return <FilesTab cardId={editableCard.id} />;
       default:
         return null;
     }
@@ -312,6 +354,21 @@ const CardDetails: React.FC = () => {
             <hr style={{ border: '1px solid #444', margin: '0.5rem 0' }} />
             <p><strong>Imported:</strong> {card.creation_date ? new Date(card.creation_date * 1000).toLocaleString() : 'N/A'}</p>
             <p><strong>Modified:</strong> {card.modification_date ? new Date(card.modification_date * 1000).toLocaleString() : 'N/A'}</p>
+        </div>
+        
+        {/* Spec Version Selector */}
+        <div style={{ background: '#2b2b2b', padding: '1rem', borderRadius: '8px' }}>
+            <label htmlFor="spec-version-selector" style={{ display: 'block', marginBottom: '0.5rem' }}>Export Spec:</label>
+            <select
+                id="spec-version-selector"
+                value={specVersion}
+                onChange={(e) => setSpecVersion(e.target.value)}
+                style={{ width: '100%', padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }}
+            >
+                <option value="v2">V2</option>
+                <option value="v3">V3 (Default)</option>
+                <option value="max">Max Compatible</option>
+            </select>
         </div>
 
         {/* Action Buttons */}
@@ -338,6 +395,9 @@ const CardDetails: React.FC = () => {
             <TabButton label="Basic Info" isActive={activeTab === 'basic'} onClick={() => setActiveTab('basic')} />
             <TabButton label="Details" isActive={activeTab === 'details'} onClick={() => setActiveTab('details')} />
             <TabButton label="Advanced" isActive={activeTab === 'advanced'} onClick={() => setActiveTab('advanced')} />
+            <TabButton label="Character Book" isActive={activeTab === 'book'} onClick={() => setActiveTab('book')} />
+            <TabButton label="Files" isActive={activeTab === 'files'} onClick={() => setActiveTab('files')} />
+            <TabButton label="Tool" isActive={activeTab === 'tool'} onClick={() => setActiveTab('tool')} />
           </div>
         )}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: '1rem' }}>

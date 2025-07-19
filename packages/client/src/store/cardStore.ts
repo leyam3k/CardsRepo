@@ -1,5 +1,35 @@
 import { create } from 'zustand';
 
+export interface LorebookEntry {
+  keys: string[];
+  content: string;
+  enabled: boolean;
+  insertion_order: number;
+  name?: string;
+  id?: number | string;
+  comment?: string;
+  extensions: Record<string, any>;
+  // V2+
+  case_sensitive?: boolean;
+  // V3+
+  use_regex?: boolean;
+  constant?: boolean;
+  selective?: boolean;
+  secondary_keys?: string[];
+  position?: 'before_char' | 'after_char';
+  priority?: number;
+}
+
+export interface Lorebook {
+  name?: string;
+  description?: string;
+  scan_depth?: number;
+  token_budget?: number;
+  recursive_scanning?: boolean;
+  extensions: Record<string, any>;
+  entries: LorebookEntry[];
+}
+
 export interface Card {
   id: string;
   imageUrl: string;
@@ -18,6 +48,7 @@ export interface Card {
   creator_notes?: string;
   alternate_greetings?: string[];
   group_only_greetings?: string[];
+  character_book?: Lorebook;
   // Organization
   tags: string[];
   language?: string;

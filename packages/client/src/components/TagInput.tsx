@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 interface TagInputProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  placeholder?: string;
 }
 
-const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
+const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange, placeholder }) => {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
 
@@ -64,7 +65,7 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange }) => {
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
-            placeholder="Add new tags or filter existing..."
+            placeholder={placeholder || "Add new tags or filter existing..."}
             style={{
                 background: 'transparent',
                 border: 'none',
