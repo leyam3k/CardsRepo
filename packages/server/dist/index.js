@@ -121,6 +121,7 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
             // New V2/V3 fields
             nickname: sourceData.nickname || '',
             group_only_greetings: sourceData.group_only_greetings || [],
+            character_book: sourceData.character_book, // Add this line
             extensions: sourceData.extensions || {},
             assets: sourceData.assets || [],
             creator_notes_multilingual: sourceData.creator_notes_multilingual || {},
@@ -181,7 +182,8 @@ app.get('/api/cards', async (req, res) => {
                 (card.post_history_instructions && card.post_history_instructions.toLowerCase().includes(lowerCaseSearchQuery)) ||
                 (card.creator_notes && card.creator_notes.toLowerCase().includes(lowerCaseSearchQuery)) ||
                 (card.alternate_greetings && card.alternate_greetings.join(' ').toLowerCase().includes(lowerCaseSearchQuery)) ||
-                (card.group_only_greetings && card.group_only_greetings.join(' ').toLowerCase().includes(lowerCaseSearchQuery)));
+                (card.group_only_greetings && card.group_only_greetings.join(' ').toLowerCase().includes(lowerCaseSearchQuery)) ||
+                (card.character_book && card.character_book.entries?.some((entry) => entry.content?.toLowerCase().includes(lowerCaseSearchQuery) || entry.keys?.join(' ').toLowerCase().includes(lowerCaseSearchQuery))));
         }
         // Apply tag filter 'tags'
         const tagsQuery = req.query.tags;
@@ -349,6 +351,77 @@ app.get('/api/cards/:id/image', async (req, res) => {
     }
     catch (error) {
         res.status(404).send('Image not found.');
+    }
+});
+app.post('/api/cards/:id/upload-file', upload.single('file'), async (req, res) => {
+    if (!req.file || !req.body.fileType) {
+        return res.status(400).send('No file or fileType specified.');
+    }
+    const { id } = req.params;
+    const { fileType } = req.body; // e.g., 'cardHtml', 'creatorNotesHtml', 'chatsJson'
+    const cardDir = path_1.default.join(cardsDir, id);
+    // Basic validation for security
+    const allowedFileTypes = {
+        cardHtml: 'card.html',
+        creatorNotesHtml: 'creator_notes.html',
+        chatsJson: 'chats.json',
+    };
+    if (!allowedFileTypes[fileType]) {
+        return res.status(400).send('Invalid file type.');
+    }
+    const filename = allowedFileTypes[fileType];
+    const filePath = path_1.default.join(cardDir, filename);
+    try {
+        await fs_1.promises.writeFile(filePath, req.file.buffer);
+        res.status(200).json({ message: `${filename} uploaded successfully.` });
+    }
+    catch (error) {
+        console.error(`Error uploading ${filename} for card ${id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+app.get('/api/cards/:id/file/:fileType', async (req, res) => {
+    try {
+        const { id, fileType } = req.params;
+        const cardDir = path_1.default.join(cardsDir, id);
+        const allowedFileTypes = {
+            cardHtml: { name: 'card.html', type: 'text/html' },
+            creatorNotesHtml: { name: 'creator_notes.html', type: 'text/html' },
+            chatsJson: { name: 'chats.json', type: 'application/json' },
+        };
+        if (!allowedFileTypes[fileType]) {
+            return res.status(400).send('Invalid file type.');
+        }
+        const { name, type } = allowedFileTypes[fileType];
+        const filePath = path_1.default.join(cardDir, name);
+        await fs_1.promises.access(filePath);
+        res.setHeader('Content-Type', type);
+        res.sendFile(filePath);
+    }
+    catch (error) {
+        res.status(404).send('File not found.');
+    }
+});
+app.delete('/api/cards/:id/file/:fileType', async (req, res) => {
+    try {
+        const { id, fileType } = req.params;
+        const cardDir = path_1.default.join(cardsDir, id);
+        const allowedFileTypes = {
+            cardHtml: 'card.html',
+            creatorNotesHtml: 'creator_notes.html',
+            chatsJson: 'chats.json',
+        };
+        if (!allowedFileTypes[fileType]) {
+            return res.status(400).send('Invalid file type.');
+        }
+        const filename = allowedFileTypes[fileType];
+        const filePath = path_1.default.join(cardDir, filename);
+        await fs_1.promises.rm(filePath, { force: true }); // force suppresses error if file doesn't exist
+        res.status(200).json({ message: `${filename} deleted successfully.` });
+    }
+    catch (error) {
+        console.error(`Error deleting ${req.params.fileType} for card ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
     }
 });
 app.get('/', (req, res) => {
