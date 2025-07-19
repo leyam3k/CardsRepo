@@ -4,28 +4,32 @@ interface TagInputProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
   placeholder?: string;
+  availableTags?: string[]; // Make this optional
 }
 
-const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange, placeholder }) => {
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
+const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange, placeholder, availableTags: propAvailableTags }) => {
+  const [fetchedAvailableTags, setFetchedAvailableTags] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
-    const fetchAvailableTags = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/tags');
-        if (response.ok) {
-          const data = await response.json();
-          setAvailableTags(data);
-        } else {
-          console.error('Failed to fetch available tags:', response.statusText);
+    // Only fetch if the prop isn't provided
+    if (propAvailableTags === undefined) {
+      const fetchAvailableTags = async () => {
+        try {
+          const response = await fetch('http://localhost:3001/api/tags');
+          if (response.ok) {
+            const data = await response.json();
+            setFetchedAvailableTags(data);
+          } else {
+            console.error('Failed to fetch available tags:', response.statusText);
+          }
+        } catch (error) {
+          console.error('Error fetching available tags:', error);
         }
-      } catch (error) {
-        console.error('Error fetching available tags:', error);
-      }
-    };
-    fetchAvailableTags();
-  }, []);
+      };
+      fetchAvailableTags();
+    }
+  }, [propAvailableTags]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -51,6 +55,7 @@ const TagInput: React.FC<TagInputProps> = ({ selectedTags, onTagsChange, placeho
     }
   };
 
+  const availableTags = propAvailableTags !== undefined ? propAvailableTags : fetchedAvailableTags;
   const allTagsToShow = [...new Set([...selectedTags, ...availableTags])];
 
   const filteredAvailableTags = allTagsToShow.filter(
