@@ -21,11 +21,13 @@ const upload = multer({
 const dataDir = path.join(__dirname, '../data');
 const cardsDir = path.join(dataDir, 'cards');
 const publicDir = path.join(__dirname, '../public'); // Corrected path for public assets
+const archiveDir = path.join(dataDir, 'archive');
 const tagsFilePath = path.join(dataDir, 'tags.json');
 const templatesFilePath = path.join(dataDir, 'templates.json');
 
 // Ensure data directories exist
 fs.mkdir(cardsDir, { recursive: true }).catch(console.error);
+fs.mkdir(archiveDir, { recursive: true }).catch(console.error);
 fs.mkdir(publicDir, { recursive: true }).catch(console.error);
 
 // Helper function to read and write to the global tags file
@@ -311,9 +313,20 @@ app.put('/api/cards/:id', async (req, res) => {
     const updatedCardData = req.body;
     const cardFilePath = path.join(cardsDir, id, 'card.json');
 
-    // To prevent partial updates or corruption, read the existing card first.
+    // --- Versioning Step ---
+    // Before updating, save the current version.
+    const cardDir = path.join(cardsDir, id);
+    const versionsDir = path.join(cardDir, 'versions');
+    await fs.mkdir(versionsDir, { recursive: true });
+
     const existingContent = await fs.readFile(cardFilePath, 'utf-8');
     const existingCard = JSON.parse(existingContent);
+    
+    // Use the modification_date for the version timestamp to be precise
+    const versionTimestamp = existingCard.modification_date || existingCard.creation_date || Math.floor(Date.now() / 1000);
+    const versionFilePath = path.join(versionsDir, `${versionTimestamp}.json`);
+    await fs.writeFile(versionFilePath, JSON.stringify(existingCard, null, 2));
+    // --- End Versioning Step ---
 
     // Merge new data with existing data
     const newCardData = { ...existingCard, ...updatedCardData, id: id, modification_date: Math.floor(Date.now() / 1000) }; // Ensure ID is not changed and update timestamp
@@ -348,6 +361,29 @@ app.delete('/api/cards/:id', async (req, res) => {
         res.status(200).json({ message: 'Card deleted successfully', cardId: id });
     } catch (error: any) {
         console.error(`Error deleting card ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
+app.delete('/api/cards/:id/archive', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cardDir = path.join(cardsDir, id);
+        const archiveCardDir = path.join(archiveDir, id);
+
+        // Check if the source card directory exists
+        try {
+            await fs.access(cardDir);
+        } catch (error) {
+            return res.status(404).send('Card not found.');
+        }
+
+        // Move the directory
+        await fs.rename(cardDir, archiveCardDir);
+
+        res.status(200).json({ message: 'Card archived successfully', cardId: id });
+    } catch (error: any) {
+        console.error(`Error archiving card ${req.params.id}:`, error);
         res.status(500).send('Internal server error.');
     }
 });
@@ -407,6 +443,50 @@ app.get('/api/cards/:id/image', async (req, res) => {
     }
 });
 
+app.post('/api/cards/:id/update-avatar', upload.single('avatar'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
+    const { id } = req.params;
+    const cardDir = path.join(cardsDir, id);
+    const versionsDir = path.join(cardDir, 'versions');
+    const imageFilePath = path.join(cardDir, 'avatar.png');
+    const cardJsonPath = path.join(cardDir, 'card.json');
+
+    try {
+        // Ensure versions directory exists
+        await fs.mkdir(versionsDir, { recursive: true });
+
+        // Get the current card data to find the last modification date
+        const cardJsonContent = await fs.readFile(cardJsonPath, 'utf-8');
+        const cardData = JSON.parse(cardJsonContent);
+        const versionTimestamp = cardData.modification_date || cardData.creation_date || Math.floor(Date.now() / 1000);
+
+        // Archive the old avatar if it exists
+        try {
+            await fs.access(imageFilePath);
+            const versionedImagePath = path.join(versionsDir, `${versionTimestamp}.png`);
+            await fs.rename(imageFilePath, versionedImagePath);
+        } catch (error) {
+            // If avatar.png doesn't exist, we can just proceed to save the new one.
+        }
+
+        // Save the new avatar
+        await fs.writeFile(imageFilePath, req.file.buffer);
+
+        // Update the modification date in card.json
+        cardData.modification_date = Math.floor(Date.now() / 1000);
+        await fs.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
+
+        res.status(200).json({ message: 'Avatar updated successfully', card: transformCardDataForClient(cardData) });
+
+    } catch (error) {
+        console.error(`Error updating avatar for card ${id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
 // New endpoint to list files for a specific file type
 app.get('/api/cards/:id/files/:fileType', async (req, res) => {
     try {
@@ -421,6 +501,42 @@ app.get('/api/cards/:id/files/:fileType', async (req, res) => {
         // If the directory doesn't exist, it means no files have been uploaded yet.
         // This is not an error condition, just return an empty array.
         res.json([]);
+    }
+});
+
+// Endpoint to get version history for a card
+app.get('/api/cards/:id/versions', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const versionsDir = path.join(cardsDir, id, 'versions');
+
+        await fs.access(versionsDir);
+        const files = await fs.readdir(versionsDir);
+
+        // Separate files by type and sort them descending by name (timestamp)
+        const history = {
+            json: files.filter(f => f.endsWith('.json')).sort((a, b) => b.localeCompare(a)),
+            images: files.filter(f => f.endsWith('.png')).sort((a, b) => b.localeCompare(a))
+        };
+
+        res.json(history);
+    } catch (error) {
+        // If the directory doesn't exist, there's no history.
+        res.json({ json: [], images: [] });
+    }
+});
+
+// Endpoint to get a specific versioned file
+app.get('/api/cards/:id/versions/:filename', async (req, res) => {
+    try {
+        const { id, filename } = req.params;
+        const filePath = path.join(cardsDir, id, 'versions', filename);
+
+        await fs.access(filePath); // Check if file exists
+        res.sendFile(filePath);
+
+    } catch (error) {
+        res.status(404).send('Version not found.');
     }
 });
 

@@ -7,6 +7,7 @@ import JsonViewer from '../components/JsonViewer';
 import CharacterBookEditor from '../components/CharacterBookEditor';
 import ToolTab from '../components/ToolTab';
 import FilesTab from '../components/FilesTab';
+import VersionHistoryTab from '../components/VersionHistoryTab';
 import { useCardStore, type Card, type Lorebook } from '../store/cardStore';
 
 const convertToSpec = (card: Card, specVersion: 'v2' | 'v3' | 'max') => {
@@ -99,26 +100,36 @@ const CardDetails: React.FC = () => {
   const [specVersion, setSpecVersion] = useState('v3');
   const [toolTabSelectedTemplateId, setToolTabSelectedTemplateId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCardDetails = async () => {
-      try {
-        const response = await fetch(`http://localhost:3001/api/cards/${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setCard(data);
-          setEditableCard(data);
-        } else {
-          setError('Card not found.');
-        }
-      } catch (err) {
-        setError('Error fetching card details.');
-      } finally {
-        setLoading(false);
+  const fetchCardDetails = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3001/api/cards/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCard(data);
+        setEditableCard(data);
+      } else {
+        setError('Card not found.');
       }
-    };
+    } catch (err) {
+      setError('Error fetching card details.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchCardDetails();
+  useEffect(() => {
+    const fetchDetails = async () => {
+        await fetchCardDetails();
+    };
+    fetchDetails();
   }, [id]);
+
+  const handleRevert = () => {
+    // This function will be passed to the child to trigger a refetch
+    fetchCardDetails();
+  };
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this card permanently?')) {
@@ -337,6 +348,8 @@ const CardDetails: React.FC = () => {
         return <ToolTab card={editableCard} selectedTemplateId={toolTabSelectedTemplateId} setSelectedTemplateId={setToolTabSelectedTemplateId} />;
       case 'files':
         return <FilesTab cardId={editableCard.id} />;
+      case 'history':
+        return <VersionHistoryTab cardId={editableCard.id} onRevert={handleRevert} />;
       default:
         return null;
     }
@@ -399,6 +412,7 @@ const CardDetails: React.FC = () => {
             <TabButton label="Character Book" isActive={activeTab === 'book'} onClick={() => setActiveTab('book')} />
             <TabButton label="Files" isActive={activeTab === 'files'} onClick={() => setActiveTab('files')} />
             <TabButton label="Tool" isActive={activeTab === 'tool'} onClick={() => setActiveTab('tool')} />
+            <TabButton label="Version History" isActive={activeTab === 'history'} onClick={() => setActiveTab('history')} />
           </div>
         )}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: '1rem' }}>
