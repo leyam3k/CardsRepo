@@ -93,8 +93,8 @@ const ToolTab: React.FC<ToolTabProps> = ({ card, selectedTemplateId, setSelected
 
       // Only set the default if no template is currently selected in the parent state
       if (data.length > 0 && selectedTemplateId === null) {
+        // The useEffect hook will now handle the selection and content loading
         setSelectedTemplateId(data[0].id);
-        handleTemplateSelect(data[0].id, data);
       } else if (data.length === 0) {
         handleNewTemplate();
       }
@@ -105,7 +105,7 @@ const ToolTab: React.FC<ToolTabProps> = ({ card, selectedTemplateId, setSelected
     }
   };
 
-  const handleTemplateSelect = (id: string, currentTemplates: Template[] = templates) => {
+  const handleTemplateSelect = (id: string) => {
     // This function now only needs to update the parent state.
     // The useEffect above will handle updating the local component's state.
     setSelectedTemplateId(id);
