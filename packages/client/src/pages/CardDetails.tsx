@@ -97,6 +97,7 @@ const CardDetails: React.FC = () => {
   const [editableCard, setEditableCard] = useState<Card | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
   const [specVersion, setSpecVersion] = useState('v3');
+  const [toolTabSelectedTemplateId, setToolTabSelectedTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCardDetails = async () => {
@@ -333,7 +334,7 @@ const CardDetails: React.FC = () => {
             />
         );
       case 'tool':
-        return <ToolTab card={editableCard} />;
+        return <ToolTab card={editableCard} selectedTemplateId={toolTabSelectedTemplateId} setSelectedTemplateId={setToolTabSelectedTemplateId} />;
       case 'files':
         return <FilesTab cardId={editableCard.id} />;
       default:

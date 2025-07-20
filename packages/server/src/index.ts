@@ -22,6 +22,7 @@ const dataDir = path.join(__dirname, '../data');
 const cardsDir = path.join(dataDir, 'cards');
 const publicDir = path.join(__dirname, '../public'); // Corrected path for public assets
 const tagsFilePath = path.join(dataDir, 'tags.json');
+const templatesFilePath = path.join(dataDir, 'templates.json');
 
 // Ensure data directories exist
 fs.mkdir(cardsDir, { recursive: true }).catch(console.error);
@@ -44,6 +45,21 @@ const updateGlobalTags = async (newTags: string[]) => {
     const existingTags = await getGlobalTags();
     const allTags = new Set([...existingTags, ...newTags]);
     await fs.writeFile(tagsFilePath, JSON.stringify(Array.from(allTags).sort(), null, 2));
+};
+
+// Helper functions to read and write templates
+const getTemplates = async (): Promise<any[]> => {
+    try {
+        await fs.access(templatesFilePath);
+        const fileContent = await fs.readFile(templatesFilePath, 'utf-8');
+        return JSON.parse(fileContent);
+    } catch (error) {
+        return [];
+    }
+};
+
+const saveTemplates = async (templates: any[]) => {
+    await fs.writeFile(templatesFilePath, JSON.stringify(templates, null, 2));
 };
 
 // Helper function to add derived properties for the client
@@ -475,6 +491,77 @@ app.delete('/api/cards/:id/file/:fileType', async (req, res) => {
     }
 });
  
+// Template Management Endpoints
+app.get('/api/templates', async (req, res) => {
+    try {
+        const templates = await getTemplates();
+        res.json(templates);
+    } catch (error) {
+        console.error('Error fetching templates:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
+app.post('/api/templates', async (req, res) => {
+    try {
+        const newTemplate = req.body;
+        if (!newTemplate.name || !newTemplate.content) {
+            return res.status(400).send('Template name and content are required.');
+        }
+        
+        const templates = await getTemplates();
+        newTemplate.id = uuidv4();
+        templates.push(newTemplate);
+        await saveTemplates(templates);
+        
+        res.status(201).json(newTemplate);
+    } catch (error) {
+        console.error('Error creating template:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
+app.put('/api/templates/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedTemplate = req.body;
+        const templates = await getTemplates();
+        
+        const index = templates.findIndex(t => t.id === id);
+        if (index === -1) {
+            return res.status(404).send('Template not found.');
+        }
+        
+        templates[index] = { ...templates[index], ...updatedTemplate, id };
+        await saveTemplates(templates);
+        
+        res.json(templates[index]);
+    } catch (error) {
+        console.error(`Error updating template ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
+app.delete('/api/templates/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let templates = await getTemplates();
+        
+        const initialLength = templates.length;
+        templates = templates.filter(t => t.id !== id);
+        
+        if (templates.length === initialLength) {
+            return res.status(404).send('Template not found.');
+        }
+        
+        await saveTemplates(templates);
+        res.status(200).json({ message: 'Template deleted successfully' });
+    } catch (error) {
+        console.error(`Error deleting template ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
 app.get('/', (req, res) => {
   res.send('Cards Repo Server is running!');
 });
