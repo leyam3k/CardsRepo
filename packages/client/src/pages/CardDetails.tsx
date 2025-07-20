@@ -214,7 +214,7 @@ const CardDetails: React.FC = () => {
         setEditableCard(updatedCard.card);
         // Don't exit edit mode automatically
         // setIsEditing(false);
-        alert('Card saved successfully!');
+        alert('Card saved successfully and new version entry created!');
         fetchAvailableTags(); // Re-fetch tags to update the global list
       } else {
         alert('Failed to update card.');
