@@ -163,6 +163,25 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
     // Save character data as card.json
     const cardFilePath = path.join(cardDir, 'card.json');
     await fs.writeFile(cardFilePath, JSON.stringify(cardToSave, null, 2));
+
+    // --- Create Initial Version ---
+    // Immediately create a version '0' or initial state snapshot upon upload.
+    const versionsDir = path.join(cardDir, 'versions');
+    await fs.mkdir(versionsDir, { recursive: true });
+    
+    const initialVersionTimestamp = cardToSave.creation_date;
+    const versionJsonPath = path.join(versionsDir, `${initialVersionTimestamp}.json`);
+    const versionImagePath = path.join(versionsDir, `${initialVersionTimestamp}.png`);
+
+    await fs.copyFile(cardFilePath, versionJsonPath);
+    // Check if avatar.png exists before trying to version it (it might not in case of an error)
+    try {
+        await fs.access(imageFilePath);
+        await fs.copyFile(imageFilePath, versionImagePath);
+    } catch (error) {
+        console.warn(`Could not find avatar to create initial version for card ${cardId}. This might happen if the default avatar is missing.`);
+    }
+    // --- End Initial Version ---
     
     // Update the global tags list with any new tags from this card
     if (cardToSave.tags.length > 0) {
@@ -308,45 +327,46 @@ app.get('/api/cards/:id', async (req, res) => {
 });
 
 app.put('/api/cards/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updatedCardData = req.body;
-    const cardFilePath = path.join(cardsDir, id, 'card.json');
+    try {
+        const { id } = req.params;
+        const updatedCardData = req.body;
+        const cardFilePath = path.join(cardsDir, id, 'card.json');
+        const cardDir = path.join(cardsDir, id);
+        const versionsDir = path.join(cardDir, 'versions');
 
-    // --- Versioning Step ---
-    // Before updating, save the current version.
-    const cardDir = path.join(cardsDir, id);
-    const versionsDir = path.join(cardDir, 'versions');
-    await fs.mkdir(versionsDir, { recursive: true });
+        // Read existing card data to merge with
+        const existingContent = await fs.readFile(cardFilePath, 'utf-8');
+        const existingCard = JSON.parse(existingContent);
 
-    const existingContent = await fs.readFile(cardFilePath, 'utf-8');
-    const existingCard = JSON.parse(existingContent);
-    
-    // Use the modification_date for the version timestamp to be precise
-    const versionTimestamp = existingCard.modification_date || existingCard.creation_date || Math.floor(Date.now() / 1000);
-    const versionFilePath = path.join(versionsDir, `${versionTimestamp}.json`);
-    await fs.writeFile(versionFilePath, JSON.stringify(existingCard, null, 2));
-    // --- End Versioning Step ---
+        // Merge new data with existing data and set the new modification date
+        const newCardData = { ...existingCard, ...updatedCardData, id: id, modification_date: Math.floor(Date.now() / 1000) };
 
-    // Merge new data with existing data
-    const newCardData = { ...existingCard, ...updatedCardData, id: id, modification_date: Math.floor(Date.now() / 1000) }; // Ensure ID is not changed and update timestamp
+        // Write the updated data back to the main file FIRST
+        await fs.writeFile(cardFilePath, JSON.stringify(newCardData, null, 2));
 
-    // Write the updated data back to the file
-    await fs.writeFile(cardFilePath, JSON.stringify(newCardData, null, 2));
+        // --- Versioning Step ---
+        // Now, create a version snapshot of the data that was JUST saved.
+        await fs.mkdir(versionsDir, { recursive: true });
+        
+        // Use the new modification_date for the version timestamp to be precise
+        const versionTimestamp = newCardData.modification_date;
+        const versionFilePath = path.join(versionsDir, `${versionTimestamp}.json`);
+        await fs.copyFile(cardFilePath, versionFilePath); // Copy the newly saved file
+        // --- End Versioning Step ---
 
-    // Also update the global tag list with any new tags
-    if (newCardData.tags && newCardData.tags.length > 0) {
-        await updateGlobalTags(newCardData.tags);
+        // Also update the global tag list with any new tags
+        if (newCardData.tags && newCardData.tags.length > 0) {
+            await updateGlobalTags(newCardData.tags);
+        }
+
+        res.json({ message: 'Card updated successfully', card: transformCardDataForClient(newCardData) });
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            return res.status(404).send('Card not found.');
+        }
+        console.error(`Error updating card ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
     }
-
-    res.json({ message: 'Card updated successfully', card: transformCardDataForClient(newCardData) });
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      return res.status(404).send('Card not found.');
-    }
-    console.error(`Error updating card ${req.params.id}:`, error);
-    res.status(500).send('Internal server error.');
-  }
 });
 
 app.delete('/api/cards/:id', async (req, res) => {
@@ -458,26 +478,21 @@ app.post('/api/cards/:id/update-avatar', upload.single('avatar'), async (req, re
         // Ensure versions directory exists
         await fs.mkdir(versionsDir, { recursive: true });
 
-        // Get the current card data to find the last modification date
-        const cardJsonContent = await fs.readFile(cardJsonPath, 'utf-8');
-        const cardData = JSON.parse(cardJsonContent);
-        const versionTimestamp = cardData.modification_date || cardData.creation_date || Math.floor(Date.now() / 1000);
-
-        // Archive the old avatar if it exists
-        try {
-            await fs.access(imageFilePath);
-            const versionedImagePath = path.join(versionsDir, `${versionTimestamp}.png`);
-            await fs.rename(imageFilePath, versionedImagePath);
-        } catch (error) {
-            // If avatar.png doesn't exist, we can just proceed to save the new one.
-        }
-
-        // Save the new avatar
+        // Save the new avatar to the primary location first
         await fs.writeFile(imageFilePath, req.file.buffer);
 
         // Update the modification date in card.json
+        const cardJsonContent = await fs.readFile(cardJsonPath, 'utf-8');
+        const cardData = JSON.parse(cardJsonContent);
         cardData.modification_date = Math.floor(Date.now() / 1000);
         await fs.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
+
+        // --- Versioning Step ---
+        // Now that the new avatar is saved, create a version of it.
+        const versionTimestamp = cardData.modification_date;
+        const versionedImagePath = path.join(versionsDir, `${versionTimestamp}.png`);
+        await fs.copyFile(imageFilePath, versionedImagePath);
+        // --- End Versioning Step ---
 
         res.status(200).json({ message: 'Avatar updated successfully', card: transformCardDataForClient(cardData) });
 
@@ -509,6 +524,17 @@ app.get('/api/cards/:id/versions', async (req, res) => {
     try {
         const { id } = req.params;
         const versionsDir = path.join(cardsDir, id, 'versions');
+        const labelsFilePath = path.join(versionsDir, 'version_labels.json');
+
+        // Read labels file
+        let labels: { [key: string]: string } = {};
+        try {
+            await fs.access(labelsFilePath);
+            const labelsContent = await fs.readFile(labelsFilePath, 'utf-8');
+            labels = JSON.parse(labelsContent);
+        } catch (error) {
+            // It's okay if the labels file doesn't exist yet
+        }
 
         await fs.access(versionsDir);
         const files = await fs.readdir(versionsDir);
@@ -516,13 +542,14 @@ app.get('/api/cards/:id/versions', async (req, res) => {
         // Separate files by type and sort them descending by name (timestamp)
         const history = {
             json: files.filter(f => f.endsWith('.json')).sort((a, b) => b.localeCompare(a)),
-            images: files.filter(f => f.endsWith('.png')).sort((a, b) => b.localeCompare(a))
+            images: files.filter(f => f.endsWith('.png')).sort((a, b) => b.localeCompare(a)),
+            labels: labels
         };
 
         res.json(history);
     } catch (error) {
         // If the directory doesn't exist, there's no history.
-        res.json({ json: [], images: [] });
+        res.json({ json: [], images: [], labels: {} });
     }
 });
 
@@ -540,6 +567,40 @@ app.get('/api/cards/:id/versions/:filename', async (req, res) => {
     }
 });
 
+
+app.post('/api/cards/:id/versions/label', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { filename, label } = req.body;
+
+        if (!filename || typeof label === 'undefined') {
+            return res.status(400).send('Filename and label are required.');
+        }
+
+        const versionsDir = path.join(cardsDir, id, 'versions');
+        const labelsFilePath = path.join(versionsDir, 'version_labels.json');
+        
+        let labels: { [key: string]: string } = {};
+        try {
+            await fs.access(labelsFilePath);
+            const labelsContent = await fs.readFile(labelsFilePath, 'utf-8');
+            labels = JSON.parse(labelsContent);
+        } catch (error) {
+            // It's okay if the file doesn't exist, we'll create it.
+            await fs.mkdir(versionsDir, { recursive: true });
+        }
+
+        labels[filename] = label;
+
+        await fs.writeFile(labelsFilePath, JSON.stringify(labels, null, 2));
+
+        res.status(200).json({ message: 'Label saved successfully.' });
+
+    } catch (error) {
+        console.error(`Error saving version label for card ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
 
 app.post('/api/cards/:id/upload-file', upload.single('file'), async (req, res) => {
     if (!req.file || !req.body.fileType) {

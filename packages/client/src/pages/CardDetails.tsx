@@ -212,8 +212,9 @@ const CardDetails: React.FC = () => {
         const updatedCard = await response.json();
         setCard(updatedCard.card);
         setEditableCard(updatedCard.card);
-        setIsEditing(false);
-        alert('Card updated successfully!');
+        // Don't exit edit mode automatically
+        // setIsEditing(false);
+        alert('Card saved successfully!');
         fetchAvailableTags(); // Re-fetch tags to update the global list
       } else {
         alert('Failed to update card.');
