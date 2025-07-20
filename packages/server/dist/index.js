@@ -368,6 +368,22 @@ app.get('/api/cards/:id/image', async (req, res) => {
         res.status(404).send('Image not found.');
     }
 });
+// New endpoint to list files for a specific file type
+app.get('/api/cards/:id/files/:fileType', async (req, res) => {
+    try {
+        const { id, fileType } = req.params;
+        const filesDir = path_1.default.join(cardsDir, id, fileType);
+        // Check if the directory exists
+        await fs_1.promises.access(filesDir);
+        const files = await fs_1.promises.readdir(filesDir);
+        res.json(files);
+    }
+    catch (error) {
+        // If the directory doesn't exist, it means no files have been uploaded yet.
+        // This is not an error condition, just return an empty array.
+        res.json([]);
+    }
+});
 app.post('/api/cards/:id/upload-file', upload.single('file'), async (req, res) => {
     if (!req.file || !req.body.fileType) {
         return res.status(400).send('No file or fileType specified.');
@@ -375,67 +391,61 @@ app.post('/api/cards/:id/upload-file', upload.single('file'), async (req, res) =
     const { id } = req.params;
     const { fileType } = req.body; // e.g., 'cardHtml', 'creatorNotesHtml', 'chatsJson'
     const cardDir = path_1.default.join(cardsDir, id);
+    const filesDir = path_1.default.join(cardDir, fileType); // Create a subdirectory for the file type
     // Basic validation for security
-    const allowedFileTypes = {
-        cardHtml: 'card.html',
-        creatorNotesHtml: 'creator_notes.html',
-        chatsJson: 'chats.json',
-    };
-    if (!allowedFileTypes[fileType]) {
+    const allowedFileTypes = ['cardHtml', 'creatorNotesHtml', 'chatsJson'];
+    if (!allowedFileTypes.includes(fileType)) {
         return res.status(400).send('Invalid file type.');
     }
-    const filename = allowedFileTypes[fileType];
-    const filePath = path_1.default.join(cardDir, filename);
     try {
+        await fs_1.promises.mkdir(filesDir, { recursive: true }); // Ensure the subdirectory exists
+        const filename = req.file.originalname; // Use the original filename
+        const filePath = path_1.default.join(filesDir, filename);
+        // Overwriting is allowed by default, as requested by the client flow
         await fs_1.promises.writeFile(filePath, req.file.buffer);
         res.status(200).json({ message: `${filename} uploaded successfully.` });
     }
     catch (error) {
-        console.error(`Error uploading ${filename} for card ${id}:`, error);
+        console.error(`Error uploading file for card ${id}:`, error);
         res.status(500).send('Internal server error.');
     }
 });
-app.get('/api/cards/:id/file/:fileType', async (req, res) => {
+// Endpoint to get a specific file for viewing or downloading
+app.get('/api/cards/:id/file/:fileType/:filename', async (req, res) => {
     try {
-        const { id, fileType } = req.params;
-        const cardDir = path_1.default.join(cardsDir, id);
-        const allowedFileTypes = {
-            cardHtml: { name: 'card.html', type: 'text/html' },
-            creatorNotesHtml: { name: 'creator_notes.html', type: 'text/html' },
-            chatsJson: { name: 'chats.json', type: 'application/json' },
-        };
-        if (!allowedFileTypes[fileType]) {
-            return res.status(400).send('Invalid file type.');
+        const { id, fileType, filename } = req.params;
+        const { action } = req.query; // 'view' or 'download'
+        const filePath = path_1.default.join(cardsDir, id, fileType, filename);
+        await fs_1.promises.access(filePath); // Check if file exists
+        if (action === 'download') {
+            // Set headers for download
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         }
-        const { name, type } = allowedFileTypes[fileType];
-        const filePath = path_1.default.join(cardDir, name);
-        await fs_1.promises.access(filePath);
-        res.setHeader('Content-Type', type);
+        // For viewing, we don't set Content-Disposition, so the browser will try to render it.
+        // We can also set Content-Type for better browser handling.
+        const ext = path_1.default.extname(filename).toLowerCase();
+        if (ext === '.html') {
+            res.setHeader('Content-Type', 'text/html');
+        }
+        else if (ext === '.json' || ext === '.jsonl') {
+            res.setHeader('Content-Type', 'application/json');
+        }
         res.sendFile(filePath);
     }
     catch (error) {
         res.status(404).send('File not found.');
     }
 });
-app.delete('/api/cards/:id/file/:fileType', async (req, res) => {
+// Endpoint to delete a specific file
+app.delete('/api/cards/:id/file/:fileType/:filename', async (req, res) => {
     try {
-        const { id, fileType } = req.params;
-        const cardDir = path_1.default.join(cardsDir, id);
-        const allowedFileTypes = {
-            cardHtml: 'card.html',
-            creatorNotesHtml: 'creator_notes.html',
-            chatsJson: 'chats.json',
-        };
-        if (!allowedFileTypes[fileType]) {
-            return res.status(400).send('Invalid file type.');
-        }
-        const filename = allowedFileTypes[fileType];
-        const filePath = path_1.default.join(cardDir, filename);
+        const { id, fileType, filename } = req.params;
+        const filePath = path_1.default.join(cardsDir, id, fileType, filename);
         await fs_1.promises.rm(filePath, { force: true }); // force suppresses error if file doesn't exist
         res.status(200).json({ message: `${filename} deleted successfully.` });
     }
     catch (error) {
-        console.error(`Error deleting ${req.params.fileType} for card ${req.params.id}:`, error);
+        console.error(`Error deleting ${req.params.filename} for card ${req.params.id}:`, error);
         res.status(500).send('Internal server error.');
     }
 });
