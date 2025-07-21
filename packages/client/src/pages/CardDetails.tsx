@@ -8,7 +8,13 @@ import CharacterBookEditor from '../components/CharacterBookEditor';
 import ToolTab from '../components/ToolTab';
 import FilesTab from '../components/FilesTab';
 import VersionHistoryTab from '../components/VersionHistoryTab';
+import CollectionSelect from '../components/CollectionSelect';
 import { useCardStore, type Card, type Lorebook } from '../store/cardStore';
+
+interface Collection {
+    id: string;
+    name: string;
+}
 
 const convertToSpec = (card: Card, specVersion: 'v2' | 'v3' | 'max') => {
   // Create a deep copy to avoid modifying the original object
@@ -100,6 +106,7 @@ const CardDetails: React.FC = () => {
   const [specVersion, setSpecVersion] = useState('v3');
   const [toolTabSelectedTemplateId, setToolTabSelectedTemplateId] = useState<string | null>(null);
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+  const [availableCollections, setAvailableCollections] = useState<Collection[]>([]);
 
   const fetchCardDetails = async () => {
     if (!id) return;
@@ -124,7 +131,19 @@ const CardDetails: React.FC = () => {
     const fetchDetails = async () => {
         await fetchCardDetails();
     };
+    const fetchCollections = async () => {
+        try {
+            const response = await fetch(`http://localhost:3001/api/collections`);
+            if (response.ok) {
+                const data = await response.json();
+                setAvailableCollections(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch collections");
+        }
+    };
     fetchDetails();
+    fetchCollections();
   }, [id]);
 
   const handleRevert = () => {
@@ -260,6 +279,10 @@ const CardDetails: React.FC = () => {
     setEditableCard(prev => (prev ? { ...prev, tags: newTags } : null));
   };
 
+  const handleCollectionsChange = (collectionIds: string[]) => {
+    setEditableCard(prev => (prev ? { ...prev, collections: collectionIds } : null));
+  };
+
   const handleArrayChange = (name: keyof Card, values: string[]) => {
     setEditableCard(prev => (prev ? { ...prev, [name]: values } : null));
   };
@@ -325,7 +348,17 @@ const CardDetails: React.FC = () => {
                 <div style={{ flex: 1 }}>
                     <TagInput selectedTags={editableCard.tags || []} onTagsChange={handleTagsChange} />
                 </div>
-            </div>
+           </div>
+           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+               <label style={{ flex: '0 0 120px', paddingTop: '8px' }}>Collections:</label>
+               <div style={{ flex: 1 }}>
+                   <CollectionSelect
+                       availableCollections={availableCollections}
+                       selectedCollectionIds={editableCard.collections || []}
+                       onChange={handleCollectionsChange}
+                   />
+               </div>
+           </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <label style={{ flex: '0 0 120px' }}>Language:</label>
               <input type="text" name="language" value={editableCard.language || ''} onChange={handleChange} style={{ flex: 1, padding: '8px', backgroundColor: '#333', color: 'white', border: '1px solid #555' }} />

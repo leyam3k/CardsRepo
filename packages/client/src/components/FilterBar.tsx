@@ -9,6 +9,10 @@ export const FilterBar: React.FC = () => {
     fetchAvailableTags,
     selectedTags,
     toggleTag,
+    availableCollections,
+    fetchAvailableCollections,
+    selectedCollection,
+    setSelectedCollection,
     sortBy,
     setSortBy,
     sortDirection,
@@ -27,7 +31,8 @@ export const FilterBar: React.FC = () => {
 
   useEffect(() => {
     fetchAvailableTags();
-  }, [fetchAvailableTags]);
+    fetchAvailableCollections();
+  }, [fetchAvailableTags, fetchAvailableCollections]);
 
   return (
     <div className={styles.filterBar}>
@@ -71,6 +76,14 @@ export const FilterBar: React.FC = () => {
       </div>
       <div className={styles.controls}>
         <span className={styles.characterCount}>{cardCount} characters</span>
+       <div className={styles.collectionFilter}>
+           <select className={styles.sortDropdown} value={selectedCollection} onChange={e => setSelectedCollection(e.target.value)}>
+               <option value="">All Collections</option>
+               {availableCollections.map(col => (
+                   <option key={col.id} value={col.id}>{col.name}</option>
+               ))}
+           </select>
+       </div>
         <div className={styles.dateFilters}>
             <select className={styles.sortDropdown} value={dateFilterType} onChange={e => setDateFilterType(e.target.value)}>
                 <option value="importDate">Imported</option>

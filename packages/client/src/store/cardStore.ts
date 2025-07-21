@@ -51,6 +51,7 @@ export interface Card {
   character_book?: Lorebook;
   // Organization
   tags: string[];
+  collections: string[]; // <-- Add this
   language?: string;
   url?: string;
   // Metadata
@@ -64,10 +65,16 @@ export interface Card {
   creator_notes_multilingual: Record<string, string>;
 }
 
+interface Collection {
+    id: string;
+    name: string;
+}
+
 interface CardStore {
   cards: Card[];
   searchTerm: string;
   selectedTags: string[];
+  selectedCollection: string; // Add this
   sortBy: string;
   sortDirection: string;
   startDate: string;
@@ -75,13 +82,16 @@ interface CardStore {
   dateFilterType: string;
   availableTags: string[];
   tagSearch: string;
+  availableCollections: Collection[]; // Add this
   fetchAvailableTags: () => Promise<void>;
+  fetchAvailableCollections: () => Promise<void>; // Add this
   addCard: (card: Card) => void;
   setCards: (cards: Card[]) => void;
   setSearchTerm: (term: string) => void;
   setTagSearch: (term: string) => void;
   clearTagFilters: () => void;
   toggleTag: (tag: string) => void;
+  setSelectedCollection: (collectionId: string) => void; // Add this
   setSortBy: (field: string) => void;
   setSortDirection: (direction: string) => void;
   setStartDate: (date: string) => void;
@@ -94,12 +104,14 @@ export const useCardStore = create<CardStore>((set, get) => ({
   cards: [],
   searchTerm: '',
   selectedTags: [],
+  selectedCollection: '',
   sortBy: 'importDate',
   sortDirection: 'desc',
   startDate: '',
   endDate: '',
   dateFilterType: 'importDate',
   availableTags: [],
+  availableCollections: [],
   tagSearch: '',
   fetchAvailableTags: async () => {
     try {
@@ -114,6 +126,19 @@ export const useCardStore = create<CardStore>((set, get) => ({
       console.error('Error fetching tags:', error);
     }
   },
+  fetchAvailableCollections: async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/collections');
+      if (response.ok) {
+        const collections = await response.json();
+        set({ availableCollections: collections });
+      } else {
+        console.error('Failed to fetch collections');
+      }
+    } catch (error) {
+      console.error('Error fetching collections:', error);
+    }
+  },
   addCard: (card) => {
     set((state) => ({ cards: [card, ...state.cards] }));
     // After adding a card, we should refresh the tags list
@@ -124,6 +149,7 @@ export const useCardStore = create<CardStore>((set, get) => ({
   setSearchTerm: (term) => set({ searchTerm: term }),
   setTagSearch: (term) => set({ tagSearch: term }),
   clearTagFilters: () => set({ selectedTags: [], tagSearch: '' }),
+  setSelectedCollection: (collectionId) => set({ selectedCollection: collectionId }),
   setSortBy: (field) => set({ sortBy: field }),
   setSortDirection: (direction) => set({ sortDirection: direction }),
   setStartDate: (date) => set({ startDate: date }),

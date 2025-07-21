@@ -25,6 +25,7 @@ const publicDir = path_1.default.join(__dirname, '../public'); // Corrected path
 const archiveDir = path_1.default.join(dataDir, 'archive');
 const tagsFilePath = path_1.default.join(dataDir, 'tags.json');
 const templatesFilePath = path_1.default.join(dataDir, 'templates.json');
+const collectionsFilePath = path_1.default.join(dataDir, 'collections.json');
 // Ensure data directories exist
 fs_1.promises.mkdir(cardsDir, { recursive: true }).catch(console.error);
 fs_1.promises.mkdir(archiveDir, { recursive: true }).catch(console.error);
@@ -61,6 +62,20 @@ const getTemplates = async () => {
 };
 const saveTemplates = async (templates) => {
     await fs_1.promises.writeFile(templatesFilePath, JSON.stringify(templates, null, 2));
+};
+// Helper functions for Collections
+const getCollections = async () => {
+    try {
+        await fs_1.promises.access(collectionsFilePath);
+        const fileContent = await fs_1.promises.readFile(collectionsFilePath, 'utf-8');
+        return JSON.parse(fileContent);
+    }
+    catch (error) {
+        return [];
+    }
+};
+const saveCollections = async (collections) => {
+    await fs_1.promises.writeFile(collectionsFilePath, JSON.stringify(collections, null, 2));
 };
 // Helper function to add derived properties for the client
 const transformCardDataForClient = (cardData) => {
@@ -144,6 +159,7 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
             creator_notes_multilingual: sourceData.creator_notes_multilingual || {},
             // Organization
             tags: sourceData.tags || [],
+            collections: sourceData.collections || [], // Add collections field
             creator: finalCreator,
             character_version: sourceData.character_version || '',
             // Our own metadata (now as unix timestamps)
@@ -232,6 +248,12 @@ app.get('/api/cards', async (req, res) => {
                 (card.group_only_greetings && card.group_only_greetings.join(' ').toLowerCase().includes(lowerCaseSearchQuery)) ||
                 (card.character_book && card.character_book.entries?.some((entry) => entry.content?.toLowerCase().includes(lowerCaseSearchQuery) || entry.keys?.join(' ').toLowerCase().includes(lowerCaseSearchQuery))));
         }
+        // Apply collections filter
+        const collectionsQuery = req.query.collections;
+        if (collectionsQuery) {
+            const requiredCollections = collectionsQuery.split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+            cards = cards.filter(card => requiredCollections.every(reqCol => card.collections?.map((c) => c.toLowerCase()).includes(reqCol)));
+        }
         // Apply tag filter 'tags'
         const tagsQuery = req.query.tags;
         if (tagsQuery) {
@@ -295,6 +317,127 @@ app.get('/api/tags', async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching tags:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+// --- Tag Management Endpoints ---
+app.put('/api/tags/rename', async (req, res) => {
+    const { oldName, newName } = req.body;
+    if (!oldName || !newName || oldName === newName) {
+        return res.status(400).send('Old name and new name are required and must be different.');
+    }
+    try {
+        // 1. Update global tags.json
+        let tags = await getGlobalTags();
+        if (!tags.includes(oldName)) {
+            return res.status(404).send(`Tag "${oldName}" not found.`);
+        }
+        tags = tags.map(tag => (tag === oldName ? newName : tag));
+        // Remove potential duplicates if newName already existed
+        tags = [...new Set(tags)];
+        await fs_1.promises.writeFile(tagsFilePath, JSON.stringify(tags.sort(), null, 2));
+        // 2. Update all cards that use the old tag
+        const cardIdFolders = await fs_1.promises.readdir(cardsDir);
+        for (const cardId of cardIdFolders) {
+            const cardJsonPath = path_1.default.join(cardsDir, cardId, 'card.json');
+            try {
+                const cardContent = await fs_1.promises.readFile(cardJsonPath, 'utf-8');
+                const cardData = JSON.parse(cardContent);
+                if (cardData.tags && cardData.tags.includes(oldName)) {
+                    cardData.tags = cardData.tags.map((tag) => (tag === oldName ? newName : tag));
+                    cardData.tags = [...new Set(cardData.tags)]; // Ensure no duplicates
+                    await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
+                }
+            }
+            catch (err) {
+                console.error(`Failed to update tags for card ${cardId}:`, err);
+                // Continue to the next card
+            }
+        }
+        res.status(200).json({ message: 'Tag renamed successfully.' });
+    }
+    catch (error) {
+        console.error('Error renaming tag:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+app.post('/api/tags/merge', async (req, res) => {
+    const { sourceTags, destinationTag } = req.body;
+    if (!sourceTags || !Array.isArray(sourceTags) || sourceTags.length === 0 || !destinationTag) {
+        return res.status(400).send('An array of source tags and a destination tag are required.');
+    }
+    try {
+        // 1. Update global tags.json
+        let tags = await getGlobalTags();
+        // Remove source tags and ensure destination tag exists
+        const sourceSet = new Set(sourceTags);
+        tags = tags.filter(tag => !sourceSet.has(tag));
+        if (!tags.includes(destinationTag)) {
+            tags.push(destinationTag);
+        }
+        await fs_1.promises.writeFile(tagsFilePath, JSON.stringify(tags.sort(), null, 2));
+        // 2. Update all cards
+        const cardIdFolders = await fs_1.promises.readdir(cardsDir);
+        for (const cardId of cardIdFolders) {
+            const cardJsonPath = path_1.default.join(cardsDir, cardId, 'card.json');
+            try {
+                const cardContent = await fs_1.promises.readFile(cardJsonPath, 'utf-8');
+                const cardData = JSON.parse(cardContent);
+                if (cardData.tags && cardData.tags.some((t) => sourceSet.has(t))) {
+                    // Filter out source tags
+                    let updatedTags = cardData.tags.filter((t) => !sourceSet.has(t));
+                    // Add destination tag if it doesn't exist
+                    if (!updatedTags.includes(destinationTag)) {
+                        updatedTags.push(destinationTag);
+                    }
+                    cardData.tags = updatedTags;
+                    await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
+                }
+            }
+            catch (err) {
+                console.error(`Failed to merge tags for card ${cardId}:`, err);
+            }
+        }
+        res.status(200).json({ message: 'Tags merged successfully.' });
+    }
+    catch (error) {
+        console.error('Error merging tags:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+app.delete('/api/tags/:name', async (req, res) => {
+    const { name } = req.params;
+    if (!name) {
+        return res.status(400).send('Tag name is required.');
+    }
+    try {
+        // 1. Update global tags.json
+        let tags = await getGlobalTags();
+        if (!tags.includes(name)) {
+            return res.status(404).send(`Tag "${name}" not found.`);
+        }
+        tags = tags.filter(tag => tag !== name);
+        await fs_1.promises.writeFile(tagsFilePath, JSON.stringify(tags.sort(), null, 2));
+        // 2. Update all cards that use the tag
+        const cardIdFolders = await fs_1.promises.readdir(cardsDir);
+        for (const cardId of cardIdFolders) {
+            const cardJsonPath = path_1.default.join(cardsDir, cardId, 'card.json');
+            try {
+                const cardContent = await fs_1.promises.readFile(cardJsonPath, 'utf-8');
+                const cardData = JSON.parse(cardContent);
+                if (cardData.tags && cardData.tags.includes(name)) {
+                    cardData.tags = cardData.tags.filter((tag) => tag !== name);
+                    await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
+                }
+            }
+            catch (err) {
+                console.error(`Failed to delete tag for card ${cardId}:`, err);
+            }
+        }
+        res.status(200).json({ message: 'Tag deleted successfully.' });
+    }
+    catch (error) {
+        console.error('Error deleting tag:', error);
         res.status(500).send('Internal server error.');
     }
 });
@@ -700,6 +843,85 @@ app.delete('/api/templates/:id', async (req, res) => {
     }
     catch (error) {
         console.error(`Error deleting template ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+// --- Collections Endpoints ---
+app.get('/api/collections', async (req, res) => {
+    try {
+        const collections = await getCollections();
+        res.json(collections);
+    }
+    catch (error) {
+        console.error('Error fetching collections:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+app.post('/api/collections', async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        if (!name) {
+            return res.status(400).send('Collection name is required.');
+        }
+        const collections = await getCollections();
+        const newCollection = {
+            id: (0, uuid_1.v4)(),
+            name,
+            description: description || '',
+        };
+        collections.push(newCollection);
+        await saveCollections(collections);
+        res.status(201).json(newCollection);
+    }
+    catch (error) {
+        console.error('Error creating collection:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+app.put('/api/collections/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description } = req.body;
+        const collections = await getCollections();
+        const index = collections.findIndex(c => c.id === id);
+        if (index === -1) {
+            return res.status(404).send('Collection not found.');
+        }
+        collections[index] = { ...collections[index], name, description };
+        await saveCollections(collections);
+        res.json(collections[index]);
+    }
+    catch (error) {
+        console.error(`Error updating collection ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+app.delete('/api/collections/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let collections = await getCollections();
+        collections = collections.filter(c => c.id !== id);
+        await saveCollections(collections);
+        // Also remove this collection ID from all cards
+        const cardIdFolders = await fs_1.promises.readdir(cardsDir);
+        for (const cardId of cardIdFolders) {
+            const cardJsonPath = path_1.default.join(cardsDir, cardId, 'card.json');
+            try {
+                const cardContent = await fs_1.promises.readFile(cardJsonPath, 'utf-8');
+                const cardData = JSON.parse(cardContent);
+                if (cardData.collections && cardData.collections.includes(id)) {
+                    cardData.collections = cardData.collections.filter((cid) => cid !== id);
+                    await fs_1.promises.writeFile(cardJsonPath, JSON.stringify(cardData, null, 2));
+                }
+            }
+            catch (err) {
+                // Ignore errors for individual cards
+            }
+        }
+        res.status(200).json({ message: 'Collection deleted successfully' });
+    }
+    catch (error) {
+        console.error(`Error deleting collection ${req.params.id}:`, error);
         res.status(500).send('Internal server error.');
     }
 });
