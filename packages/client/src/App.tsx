@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import CardGallery from './pages/CardGallery';
 import CardDetails from './pages/CardDetails';
+import TagManagement from './pages/TagManagement';
+import CollectionManagement from './pages/CollectionManagement';
 import './App.css';
 
 function App() {
@@ -11,6 +13,8 @@ function App() {
         {/* Routes with the main Janitor AI Layout */}
         <Route path="/" element={<Layout />}>
           <Route index element={<CardGallery />} />
+          <Route path="tags" element={<TagManagement />} />
+          <Route path="collections" element={<CollectionManagement />} />
         </Route>
         
         {/* Standalone route for CardDetails without the main layout */}

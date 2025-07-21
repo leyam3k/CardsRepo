@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import styles from './Header.module.css';
 import UploadCard from './UploadCard';
 import { useCardStore } from '../store/cardStore';
@@ -10,11 +11,13 @@ export const Header: React.FC = () => {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <span className={styles.logo}>Cards Repo</span>
+        <Link to="/" className={styles.logo}>Cards Repo</Link>
+        <Link to="/tags" className={styles.navLink}>Tags</Link>
+        <Link to="/collections" className={styles.navLink}>Collections</Link>
       </div>
       <div className={styles.center}>
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder="Search by name, creator, or description..."
           className={styles.searchBar}
           value={searchTerm}

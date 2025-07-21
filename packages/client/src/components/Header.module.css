@@ -79,3 +79,14 @@
   justify-content: center;
   font-weight: bold;
 }
+.navLink {
+  color: #a9a9a9;
+  text-decoration: none;
+  margin-left: 20px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.navLink:hover {
+  color: #ffffff;
+}
