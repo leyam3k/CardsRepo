@@ -188,6 +188,19 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
         await updateGlobalTags(cardToSave.tags);
     }
 
+    // --- Automatic Archival Step ---
+    const archiveCardDir = path.join(archiveDir, cardId);
+    await fs.mkdir(archiveCardDir, { recursive: true });
+    const archiveFilePath = path.join(archiveCardDir, req.file.originalname);
+    try {
+        // Save the original uploaded buffer directly to the archive
+        await fs.writeFile(archiveFilePath, buffer);
+    } catch (archiveError) {
+        console.error(`Failed to create automatic archive for card ${cardId}:`, archiveError);
+        // Don't fail the whole request, but log the error.
+    }
+    // --- End Automatic Archival Step ---
+
     res.status(201).json({ message: 'Card uploaded successfully', card: transformCardDataForClient(cardToSave) });
   } catch (error) {
     console.error('Error uploading card:', error);
@@ -391,19 +404,15 @@ app.delete('/api/cards/:id/archive', async (req, res) => {
         const cardDir = path.join(cardsDir, id);
         const archiveCardDir = path.join(archiveDir, id);
 
-        // Check if the source card directory exists
-        try {
-            await fs.access(cardDir);
-        } catch (error) {
-            return res.status(404).send('Card not found.');
-        }
+        // Permanently delete from both active and archive directories.
+        // The 'force: true' option suppresses errors if a path does not exist,
+        // which is useful in case one has already been deleted.
+        await fs.rm(cardDir, { recursive: true, force: true });
+        await fs.rm(archiveCardDir, { recursive: true, force: true });
 
-        // Move the directory
-        await fs.rename(cardDir, archiveCardDir);
-
-        res.status(200).json({ message: 'Card archived successfully', cardId: id });
+        res.status(200).json({ message: 'Card and its archive permanently deleted', cardId: id });
     } catch (error: any) {
-        console.error(`Error archiving card ${req.params.id}:`, error);
+        console.error(`Error permanently deleting card ${req.params.id}:`, error);
         res.status(500).send('Internal server error.');
     }
 });

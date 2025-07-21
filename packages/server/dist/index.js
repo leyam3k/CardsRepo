@@ -175,6 +175,19 @@ app.post('/api/cards/upload', upload.single('card'), async (req, res) => {
         if (cardToSave.tags.length > 0) {
             await updateGlobalTags(cardToSave.tags);
         }
+        // --- Automatic Archival Step ---
+        const archiveCardDir = path_1.default.join(archiveDir, cardId);
+        await fs_1.promises.mkdir(archiveCardDir, { recursive: true });
+        const archiveFilePath = path_1.default.join(archiveCardDir, req.file.originalname);
+        try {
+            // Save the original uploaded buffer directly to the archive
+            await fs_1.promises.writeFile(archiveFilePath, buffer);
+        }
+        catch (archiveError) {
+            console.error(`Failed to create automatic archive for card ${cardId}:`, archiveError);
+            // Don't fail the whole request, but log the error.
+        }
+        // --- End Automatic Archival Step ---
         res.status(201).json({ message: 'Card uploaded successfully', card: transformCardDataForClient(cardToSave) });
     }
     catch (error) {
@@ -352,19 +365,15 @@ app.delete('/api/cards/:id/archive', async (req, res) => {
         const { id } = req.params;
         const cardDir = path_1.default.join(cardsDir, id);
         const archiveCardDir = path_1.default.join(archiveDir, id);
-        // Check if the source card directory exists
-        try {
-            await fs_1.promises.access(cardDir);
-        }
-        catch (error) {
-            return res.status(404).send('Card not found.');
-        }
-        // Move the directory
-        await fs_1.promises.rename(cardDir, archiveCardDir);
-        res.status(200).json({ message: 'Card archived successfully', cardId: id });
+        // Permanently delete from both active and archive directories.
+        // The 'force: true' option suppresses errors if a path does not exist,
+        // which is useful in case one has already been deleted.
+        await fs_1.promises.rm(cardDir, { recursive: true, force: true });
+        await fs_1.promises.rm(archiveCardDir, { recursive: true, force: true });
+        res.status(200).json({ message: 'Card and its archive permanently deleted', cardId: id });
     }
     catch (error) {
-        console.error(`Error archiving card ${req.params.id}:`, error);
+        console.error(`Error permanently deleting card ${req.params.id}:`, error);
         res.status(500).send('Internal server error.');
     }
 });

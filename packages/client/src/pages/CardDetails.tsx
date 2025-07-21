@@ -139,7 +139,7 @@ const CardDetails: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this card permanently?')) {
+    if (window.confirm('Are you sure you want to delete this card? The archived backup will be preserved.')) {
       try {
         const response = await fetch(`http://localhost:3001/api/cards/${id}`, {
           method: 'DELETE',
@@ -152,6 +152,26 @@ const CardDetails: React.FC = () => {
         }
       } catch (err) {
         alert('Error deleting card.');
+      }
+    }
+  };
+
+  const handleDeleteWithArchive = async () => {
+    if (window.confirm('Are you sure you want to permanently delete this card AND its archive? This action cannot be undone.')) {
+      if (window.confirm('FINAL CONFIRMATION: This will delete all associated versions and the original archived file. Are you absolutely sure?')) {
+          try {
+            const response = await fetch(`http://localhost:3001/api/cards/${id}/archive`, {
+              method: 'DELETE',
+            });
+            if (response.ok) {
+              alert('Card and archive deleted permanently.');
+              navigate('/');
+            } else {
+              alert('Failed to delete card and archive.');
+            }
+          } catch (err) {
+            alert('Error deleting card and archive.');
+          }
       }
     }
   };
@@ -447,7 +467,8 @@ const CardDetails: React.FC = () => {
             <button onClick={handleDownloadPng} style={{ padding: '10px', background: '#1a4a7e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Download PNG</button>
             <button onClick={handleDownloadJson} style={{ padding: '10px', background: '#1a4a7e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Download JSON</button>
             <button onClick={handleDuplicate} style={{ padding: '10px', background: '#7e571a', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Duplicate Card</button>
-            <button onClick={handleDelete} style={{ padding: '10px', background: 'darkred', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete Card</button>
+            <button onClick={handleDelete} style={{ padding: '10px', background: '#a54343', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete Card</button>
+            <button onClick={handleDeleteWithArchive} style={{ padding: '10px', background: '#8b0000', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete Card + Archive</button>
         </div>
       </div>
 
