@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import FullScreenTextEditor from '../components/FullScreenTextEditor';
 import TagInput from '../components/TagInput';
+import CollectionInput from '../components/CollectionInput';
 import TextArrayEditor from '../components/TextArrayEditor';
 import JsonViewer from '../components/JsonViewer';
 import CharacterBookEditor from '../components/CharacterBookEditor';
@@ -91,6 +92,7 @@ const CardDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const fetchAvailableTags = useCardStore((state) => state.fetchAvailableTags);
+  const fetchCollections = useCardStore((state) => state.fetchCollections);
   const [card, setCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +127,8 @@ const CardDetails: React.FC = () => {
         await fetchCardDetails();
     };
     fetchDetails();
-  }, [id]);
+    fetchCollections();
+  }, [id, fetchCollections]);
 
   const handleRevert = () => {
     // This function will be passed to the child to trigger a refetch
@@ -243,6 +246,7 @@ const CardDetails: React.FC = () => {
         // setIsEditing(false);
         alert('Card saved successfully and new version entry created!');
         fetchAvailableTags(); // Re-fetch tags to update the global list
+        fetchCollections(); // Re-fetch collections
       } else {
         alert('Failed to update card.');
       }
@@ -258,6 +262,10 @@ const CardDetails: React.FC = () => {
 
   const handleTagsChange = (newTags: string[]) => {
     setEditableCard(prev => (prev ? { ...prev, tags: newTags } : null));
+  };
+
+  const handleCollectionsChange = (newCollections: string[]) => {
+    setEditableCard(prev => (prev ? { ...prev, collections: newCollections } : null));
   };
 
   const handleArrayChange = (name: keyof Card, values: string[]) => {
@@ -324,6 +332,12 @@ const CardDetails: React.FC = () => {
                 <label style={{ flex: '0 0 120px', paddingTop: '8px' }}>Tags:</label>
                 <div style={{ flex: 1 }}>
                     <TagInput selectedTags={editableCard.tags || []} onTagsChange={handleTagsChange} />
+                </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                <label style={{ flex: '0 0 120px', paddingTop: '8px' }}>Collections:</label>
+                <div style={{ flex: 1 }}>
+                    <CollectionInput selectedCollections={editableCard.collections || []} onCollectionsChange={handleCollectionsChange} />
                 </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
