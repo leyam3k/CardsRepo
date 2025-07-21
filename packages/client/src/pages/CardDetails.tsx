@@ -99,6 +99,7 @@ const CardDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState('basic');
   const [specVersion, setSpecVersion] = useState('v3');
   const [toolTabSelectedTemplateId, setToolTabSelectedTemplateId] = useState<string | null>(null);
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 
   const fetchCardDetails = async () => {
     if (!id) return;
@@ -128,7 +129,13 @@ const CardDetails: React.FC = () => {
 
   const handleRevert = () => {
     // This function will be passed to the child to trigger a refetch
-    fetchCardDetails();
+    // We fetch details and then append a timestamp to the image URL to bust the cache
+    fetchCardDetails().then(() => {
+        setCard(prev => {
+            if (!prev) return null;
+            return { ...prev, imageUrl: `${prev.imageUrl.split('?')[0]}?t=${new Date().getTime()}` };
+        });
+    });
   };
 
   const handleDelete = async () => {
@@ -359,8 +366,49 @@ const CardDetails: React.FC = () => {
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 48px)', padding: '1rem', gap: '1rem' }}>
       {/* Left Panel: Avatar & Actions */}
-      <div style={{ flex: '0 0 300px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <img src={`http://localhost:3001${card.imageUrl}`} alt={card.name} style={{ width: '100%', borderRadius: '8px' }} />
+      <div style={{ flex: '0 0 320px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', backgroundColor: '#202020', borderRadius: '8px' }}>
+            <img
+                src={`http://localhost:3001${card.imageUrl}`}
+                alt={card.name}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                }}
+            />
+            <button
+                onClick={() => setIsImagePreviewOpen(true)}
+                aria-label="Zoom image"
+                style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    background: 'transparent',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    opacity: 0.6,
+                    transition: 'opacity 0.2s',
+                    padding: '4px' // Added padding
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/>
+                </svg>
+            </button>
+        </div>
         
         {/* Card Info Box */}
         <div style={{ background: '#2b2b2b', padding: '1rem', borderRadius: '8px', color: '#ccc', fontSize: '0.9rem' }}>
@@ -420,6 +468,30 @@ const CardDetails: React.FC = () => {
             {renderContent()}
         </div>
       </div>
+
+      {isImagePreviewOpen && (
+        <div
+            onClick={() => setIsImagePreviewOpen(false)}
+            style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                zIndex: 1000
+            }}
+        >
+            <img
+                onClick={(e) => e.stopPropagation()}
+                src={`http://localhost:3001${card.imageUrl}`}
+                alt="Preview"
+                style={{
+                    maxHeight: '90vh',
+                    maxWidth: '90vw',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                }}
+            />
+        </div>
+      )}
     </div>
   );
 };

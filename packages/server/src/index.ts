@@ -567,6 +567,43 @@ app.get('/api/cards/:id/versions/:filename', async (req, res) => {
     }
 });
 
+// Endpoint to DELETE a specific versioned file
+app.delete('/api/cards/:id/versions/:filename', async (req, res) => {
+    try {
+        const { id, filename } = req.params;
+
+        // --- Validation Step ---
+        if (!filename.endsWith('.png')) {
+            return res.status(400).send('Only image versions can be deleted.');
+        }
+
+        const versionsDir = path.join(cardsDir, id, 'versions');
+        const allFiles = await fs.readdir(versionsDir);
+        const imageVersions = allFiles.filter(f => f.endsWith('.png')).sort((a, b) => b.localeCompare(a));
+
+        const isLatest = imageVersions.length > 0 && imageVersions[0] === filename;
+        const isInitial = imageVersions.length > 0 && imageVersions[imageVersions.length - 1] === filename;
+
+        if (isLatest) {
+            return res.status(400).send('Cannot delete the most recent avatar version.');
+        }
+        if (isInitial) {
+            return res.status(400).send('Cannot delete the initial avatar version.');
+        }
+        // --- End Validation Step ---
+
+        const filePath = path.join(versionsDir, filename);
+
+        await fs.rm(filePath, { force: true }); // Use force to avoid error if it doesn't exist for some reason
+
+        res.status(200).json({ message: 'Version deleted successfully.' });
+
+    } catch (error) {
+        console.error(`Error deleting version ${req.params.filename} for card ${req.params.id}:`, error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
 
 app.post('/api/cards/:id/versions/label', async (req, res) => {
     try {
